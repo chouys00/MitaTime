@@ -194,31 +194,31 @@ class TimerService extends EventEmitter {
   }
 
   /**
-   * 休息結束 → 系統通知 → 關閉/點擊後自動進入「開始專注」
+   * 休息結束 → 系統通知 → 關閉/點擊後回到 idle（不自動開始專注）
    */
   private notifyRestEnd(): void {
     if (!Notification.isSupported()) {
-      this.autoStartFocus();
+      this.clearToIdle();
       return;
     }
 
     const notification = new Notification({
       title: '休息結束',
-      body: '回到專注狀態，開啟新的循環！',
+      body: '準備好時，再自行開始專注即可。',
       silent: false,
     });
 
-    let transitioned = false;
-    const transition = () => {
-      if (transitioned) return;
-      transitioned = true;
-      this.autoStartFocus();
+    let resolved = false;
+    const finish = () => {
+      if (resolved) return;
+      resolved = true;
+      this.clearToIdle();
     };
 
-    notification.on('click', transition);
-    notification.on('close', transition);
-    // Linux 下 close 事件可能不會觸發；保險起見 6 秒後自動轉場
-    setTimeout(transition, 6000);
+    notification.on('click', finish);
+    notification.on('close', finish);
+    // Linux 下 close 事件可能不會觸發；保險起見 6 秒後結束
+    setTimeout(finish, 6000);
 
     notification.show();
   }
@@ -250,10 +250,6 @@ class TimerService extends EventEmitter {
     setTimeout(finish, 6000);
 
     notification.show();
-  }
-
-  private autoStartFocus(): void {
-    void this.start('focus');
   }
 
   /** 還原、顯示並聚焦所有應用程式視窗（含關閉到 Tray 的隱藏狀態） */

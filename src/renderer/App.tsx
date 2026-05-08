@@ -42,7 +42,11 @@ export function App() {
         prev.isRunning ||
         prev.isPaused);
 
-    if (crossedToCompleted && cycleKey !== completedCycleRef.current) {
+    if (
+      crossedToCompleted &&
+      cycleKey !== completedCycleRef.current &&
+      (timer.mode === 'focus' || timer.mode === 'rest')
+    ) {
       completedCycleRef.current = cycleKey;
       setCompletionMode(timer.mode);
       setOverlayVisible(true);
@@ -55,7 +59,7 @@ export function App() {
       }, 3200);
     }
 
-    if (timer.mode === 'idle' || (prev && prev.mode !== timer.mode && timer.mode !== 'idle')) {
+    if (timer.mode === 'idle' || (prev && prev.mode !== timer.mode)) {
       completedCycleRef.current = null;
     }
 
@@ -63,7 +67,7 @@ export function App() {
   }, [timer]);
 
   const completionTitle =
-    completionMode === 'rest' ? '休息結束，回到專注' : '專注結束，該休息了';
+    completionMode === 'rest' ? '休息結束' : '專注結束，該休息了';
 
   return (
     <div className={`app ${isFocus ? 'mode-focus' : ''} ${isRest ? 'mode-rest' : ''}`}>

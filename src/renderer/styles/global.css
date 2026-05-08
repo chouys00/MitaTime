@@ -187,18 +187,13 @@ body,
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0;
+  opacity: 1;
   transition:
-    opacity 280ms ease,
     background 200ms ease,
     color 200ms ease,
     transform 200ms ease;
   position: relative;
   z-index: 1;
-}
-
-.app.is-hovered .titlebar-btn {
-  opacity: 1;
 }
 
 .titlebar-btn:hover {

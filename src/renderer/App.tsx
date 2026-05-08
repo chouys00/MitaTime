@@ -12,7 +12,6 @@ export function App() {
   useElectronBridge();
   useKeyboardShortcuts();
   const timer = useTimerStore((s) => s.timer);
-  const [isHovered, setIsHovered] = useState(false);
   const [completionMode, setCompletionMode] = useState<Exclude<TimerMode, 'idle'> | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
   const prevTimerRef = useRef<TimerState | null>(null);
@@ -67,13 +66,7 @@ export function App() {
     completionMode === 'rest' ? '休息結束，回到專注' : '專注結束，該休息了';
 
   return (
-    <div
-      className={`app ${isFocus ? 'mode-focus' : ''} ${isRest ? 'mode-rest' : ''} ${
-        isHovered ? 'is-hovered' : ''
-      }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className={`app ${isFocus ? 'mode-focus' : ''} ${isRest ? 'mode-rest' : ''}`}>
       <div className="glass-surface" />
       <div className={`completion-overlay ${overlayVisible ? 'is-visible' : ''}`} aria-hidden>
         <div className="completion-overlay__card">

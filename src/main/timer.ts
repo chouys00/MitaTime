@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Notification } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { EventEmitter } from 'node:events';
 import type { TimerMode, TimerState } from '../shared/types';
 import { IPC, TICK_INTERVAL_MS } from '../shared/constants';
@@ -20,6 +20,15 @@ class TimerService extends EventEmitter {
   private isRunning = false;
   private isPaused = false;
   private tickHandle: NodeJS.Timeout | null = null;
+  /** 計時結束後延遲回到 idle（讓 Renderer 中央完成提示有時間顯示；與 App 內 overlay 約 3.2s 對齊） */
+  private completionClearHandle: NodeJS.Timeout | null = null;
+
+  private cancelScheduledCompletionClear(): void {
+    if (this.completionClearHandle !== null) {
+      clearTimeout(this.completionClearHandle);
+      this.completionClearHandle = null;
+    }
+  }
 
   /** 取得當前狀態 */
   getState(): TimerState {
@@ -34,6 +43,7 @@ class TimerService extends EventEmitter {
 
   /** 啟動指定模式的倒數 */
   async start(mode: 'focus' | 'rest'): Promise<TimerState> {
+    this.cancelScheduledCompletionClear();
     const settings = settingsStore.get();
     const seconds = mode === 'focus' ? settings.focusSeconds : settings.restSeconds;
     const totalMs = seconds * 1000;
@@ -91,6 +101,7 @@ class TimerService extends EventEmitter {
    * 使用者重置：idle 不變；專注／休息則載入該模式設定的完整時長並等同按下暫停（不進行倒數）。
    */
   reset(): TimerState {
+    this.cancelScheduledCompletionClear();
     if (this.mode === 'idle') {
       this.stopTickLoop();
       this.totalMs = 0;
@@ -119,6 +130,7 @@ class TimerService extends EventEmitter {
 
   /** 計時完成或流程結束時清空為 idle */
   private clearToIdle(): TimerState {
+    this.cancelScheduledCompletionClear();
     this.stopTickLoop();
     this.mode = 'idle';
     this.totalMs = 0;
@@ -170,86 +182,26 @@ class TimerService extends EventEmitter {
   }
 
   private handleComplete(): void {
-    const completedMode = this.mode;
     this.stopTickLoop();
     this.isRunning = false;
     this.isPaused = false;
 
-    // 鎖定剩餘時間為 0，確保 UI 顯示 00:00
+    // 鎖定剩餘時間為 0，確保 UI 顯示 00:00；維持 mode 為 focus/rest 讓 Renderer 顯示中央完成提示
     this.targetTimestamp = Date.now();
 
-    // 關閉到 Tray／最小化時仍須帶出主視窗，與系統通知一併被使用者察覺
+    // 關閉到 Tray／最小化時仍須帶出主視窗（不再顯示系統右下角通知）
     this.bringWindowsToForeground();
-
-    if (completedMode === 'rest') {
-      this.notifyRestEnd();
-    } else if (completedMode === 'focus') {
-      this.notifyFocusEnd();
-    }
-
     this.flashWindowAttention();
 
     this.broadcast();
     this.emitStateChanged();
-  }
 
-  /**
-   * 休息結束 → 系統通知 → 關閉/點擊後回到 idle（不自動開始專注）
-   */
-  private notifyRestEnd(): void {
-    if (!Notification.isSupported()) {
+    const COMPLETION_HOLD_MS = 3500;
+    this.cancelScheduledCompletionClear();
+    this.completionClearHandle = setTimeout(() => {
+      this.completionClearHandle = null;
       this.clearToIdle();
-      return;
-    }
-
-    const notification = new Notification({
-      title: '休息結束',
-      body: '準備好時，再自行開始專注即可。',
-      silent: false,
-    });
-
-    let resolved = false;
-    const finish = () => {
-      if (resolved) return;
-      resolved = true;
-      this.clearToIdle();
-    };
-
-    notification.on('click', finish);
-    notification.on('close', finish);
-    // Linux 下 close 事件可能不會觸發；保險起見 6 秒後結束
-    setTimeout(finish, 6000);
-
-    notification.show();
-  }
-
-  /**
-   * 專注結束 → 系統通知 → 關閉後不自動銜接，回到 idle
-   */
-  private notifyFocusEnd(): void {
-    if (!Notification.isSupported()) {
-      this.clearToIdle();
-      return;
-    }
-
-    const notification = new Notification({
-      title: '專注結束',
-      body: '辛苦了，可以開始休息囉。',
-      silent: false,
-    });
-
-    let resolved = false;
-    const finish = () => {
-      if (resolved) return;
-      resolved = true;
-      this.clearToIdle();
-    };
-
-    notification.on('click', finish);
-    notification.on('close', finish);
-    setTimeout(finish, 6000);
-
-    notification.show();
+    }, COMPLETION_HOLD_MS);
   }
 
   /** 還原、顯示並聚焦所有應用程式視窗（含關閉到 Tray 的隱藏狀態） */

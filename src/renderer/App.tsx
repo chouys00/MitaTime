@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { TimerDisplay } from './components/TimerDisplay';
 import { ProgressBar } from './components/ProgressBar';
 import { ControlPanel } from './components/ControlPanel';
 import { TitleBar } from './components/TitleBar';
 import { useElectronBridge } from './hooks/useElectronBridge';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { ipcTimerDismissCompletion } from './lib/timerIpc';
 import { useTimerStore } from './store/timerStore';
 import type { TimerMode, TimerState } from '../shared/types';
 
@@ -16,18 +17,14 @@ export function App() {
   const [overlayVisible, setOverlayVisible] = useState(false);
   const prevTimerRef = useRef<TimerState | null>(null);
   const completedCycleRef = useRef<string | null>(null);
-  const overlayTimeoutRef = useRef<number | null>(null);
 
   const isRest = timer.mode === 'rest';
   const isFocus = timer.mode === 'focus';
 
-  useEffect(() => {
-    return () => {
-      if (overlayTimeoutRef.current !== null) {
-        window.clearTimeout(overlayTimeoutRef.current);
-      }
-    };
-  }, []);
+  const dismissCompletionOverlay = useCallback(() => {
+    if (!overlayVisible) return;
+    void ipcTimerDismissCompletion();
+  }, [overlayVisible]);
 
   useEffect(() => {
     const prev = prevTimerRef.current;
@@ -51,12 +48,10 @@ export function App() {
       setCompletionMode(timer.mode);
       setOverlayVisible(true);
       playCompletionTone(timer.mode);
-      if (overlayTimeoutRef.current !== null) {
-        window.clearTimeout(overlayTimeoutRef.current);
-      }
-      overlayTimeoutRef.current = window.setTimeout(() => {
-        setOverlayVisible(false);
-      }, 3200);
+    }
+
+    if (overlayVisible && !isCompleted) {
+      setOverlayVisible(false);
     }
 
     if (timer.mode === 'idle' || (prev && prev.mode !== timer.mode)) {
@@ -64,20 +59,21 @@ export function App() {
     }
 
     prevTimerRef.current = timer;
-  }, [timer]);
+  }, [timer, overlayVisible]);
 
   const completionTitle =
     completionMode === 'rest' ? '休息結束' : '專注結束，該休息了';
 
+  const onCompletionOverlayKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      dismissCompletionOverlay();
+    }
+  };
+
   return (
     <div className={`app ${isFocus ? 'mode-focus' : ''} ${isRest ? 'mode-rest' : ''}`}>
       <div className="glass-surface" />
-      <div className={`completion-overlay ${overlayVisible ? 'is-visible' : ''}`} aria-hidden>
-        <div className="completion-overlay__card">
-          <div className="completion-overlay__title">{completionTitle}</div>
-          <div className="completion-overlay__desc">倒數完成</div>
-        </div>
-      </div>
       <TitleBar />
 
       <main className="content">
@@ -87,6 +83,23 @@ export function App() {
         </section>
         <ControlPanel timer={timer} />
       </main>
+
+      <div
+        className={`completion-overlay ${overlayVisible ? 'is-visible' : ''}`}
+        role="button"
+        tabIndex={overlayVisible ? 0 : -1}
+        aria-hidden={!overlayVisible}
+        aria-labelledby="completion-overlay-title"
+        onClick={dismissCompletionOverlay}
+        onKeyDown={onCompletionOverlayKeyDown}
+      >
+        <div className="completion-overlay__card">
+          <div className="completion-overlay__title" id="completion-overlay-title">
+            {completionTitle}
+          </div>
+          <div className="completion-overlay__desc">點擊任意處關閉</div>
+        </div>
+      </div>
     </div>
   );
 }

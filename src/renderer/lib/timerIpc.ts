@@ -34,7 +34,6 @@ interface LocalRun {
 }
 
 let localRun: LocalRun | null = null;
-let localCompletionHandle: ReturnType<typeof setTimeout> | null = null;
 
 function stopLocalTick(): void {
   if (localRun?.tickHandle) {
@@ -46,10 +45,6 @@ function stopLocalTick(): void {
 function discardLocalRun(): void {
   stopLocalTick();
   localRun = null;
-  if (localCompletionHandle) {
-    clearTimeout(localCompletionHandle);
-    localCompletionHandle = null;
-  }
 }
 
 function computeLocalRemaining(): number {
@@ -74,7 +69,8 @@ function completeLocalRun(): void {
   if (!localRun) return;
   const completedMode = localRun.mode;
   const completedTotalMs = localRun.totalMs;
-  discardLocalRun();
+  stopLocalTick();
+  localRun = null;
   useTimerStore.getState().setTimer({
     mode: completedMode,
     totalMs: completedTotalMs,
@@ -82,16 +78,22 @@ function completeLocalRun(): void {
     isRunning: false,
     isPaused: false,
   });
-  localCompletionHandle = setTimeout(() => {
-    useTimerStore.getState().setTimer({
-      mode: 'idle',
-      totalMs: 0,
-      remainingMs: 0,
-      isRunning: false,
-      isPaused: false,
-    });
-    localCompletionHandle = null;
-  }, 3200);
+}
+
+function dismissLocalCompletion(): void {
+  const t = useTimerStore.getState().timer;
+  const isCompletionHold =
+    t.mode !== 'idle' && t.remainingMs === 0 && !t.isRunning && !t.isPaused;
+  if (!isCompletionHold) {
+    return;
+  }
+  useTimerStore.getState().setTimer({
+    mode: 'idle',
+    totalMs: 0,
+    remainingMs: 0,
+    isRunning: false,
+    isPaused: false,
+  });
 }
 
 function localTickOnce(): void {
@@ -243,6 +245,20 @@ export async function ipcTimerReset(): Promise<void> {
     applyReturnedState(state);
   } catch (e) {
     console.error('[MitaTime] timer:reset 失敗', e);
+  }
+}
+
+export async function ipcTimerDismissCompletion(): Promise<void> {
+  const api = getElectronApi();
+  if (!api) {
+    dismissLocalCompletion();
+    return;
+  }
+  try {
+    const state = await api.invoke<TimerState>(IPC.TIMER_DISMISS_COMPLETION);
+    applyReturnedState(state);
+  } catch (e) {
+    console.error('[MitaTime] timer:dismiss-completion 失敗', e);
   }
 }
 

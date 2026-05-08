@@ -20,15 +20,6 @@ class TimerService extends EventEmitter {
   private isRunning = false;
   private isPaused = false;
   private tickHandle: NodeJS.Timeout | null = null;
-  /** 計時結束後延遲回到 idle（讓 Renderer 中央完成提示有時間顯示；與 App 內 overlay 約 3.2s 對齊） */
-  private completionClearHandle: NodeJS.Timeout | null = null;
-
-  private cancelScheduledCompletionClear(): void {
-    if (this.completionClearHandle !== null) {
-      clearTimeout(this.completionClearHandle);
-      this.completionClearHandle = null;
-    }
-  }
 
   /** 取得當前狀態 */
   getState(): TimerState {
@@ -43,7 +34,6 @@ class TimerService extends EventEmitter {
 
   /** 啟動指定模式的倒數 */
   async start(mode: 'focus' | 'rest'): Promise<TimerState> {
-    this.cancelScheduledCompletionClear();
     const settings = settingsStore.get();
     const seconds = mode === 'focus' ? settings.focusSeconds : settings.restSeconds;
     const totalMs = seconds * 1000;
@@ -101,7 +91,6 @@ class TimerService extends EventEmitter {
    * 使用者重置：idle 不變；專注／休息則載入該模式設定的完整時長並等同按下暫停（不進行倒數）。
    */
   reset(): TimerState {
-    this.cancelScheduledCompletionClear();
     if (this.mode === 'idle') {
       this.stopTickLoop();
       this.totalMs = 0;
@@ -130,7 +119,6 @@ class TimerService extends EventEmitter {
 
   /** 計時完成或流程結束時清空為 idle */
   private clearToIdle(): TimerState {
-    this.cancelScheduledCompletionClear();
     this.stopTickLoop();
     this.mode = 'idle';
     this.totalMs = 0;
@@ -195,13 +183,24 @@ class TimerService extends EventEmitter {
 
     this.broadcast();
     this.emitStateChanged();
+  }
 
-    const COMPLETION_HOLD_MS = 3500;
-    this.cancelScheduledCompletionClear();
-    this.completionClearHandle = setTimeout(() => {
-      this.completionClearHandle = null;
-      this.clearToIdle();
-    }, COMPLETION_HOLD_MS);
+  /** 使用者關閉「倒數完成」提示後回到 idle */
+  dismissCompletion(): TimerState {
+    if (this.mode === 'idle') {
+      return this.getState();
+    }
+    if (
+      this.isRunning ||
+      this.isPaused ||
+      (this.mode !== 'focus' && this.mode !== 'rest')
+    ) {
+      return this.getState();
+    }
+    if (this.computeRemainingMs() > 0) {
+      return this.getState();
+    }
+    return this.clearToIdle();
   }
 
   /** 還原、顯示並聚焦所有應用程式視窗（含關閉到 Tray 的隱藏狀態） */

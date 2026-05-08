@@ -27,6 +27,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   ipcMain.handle(IPC.TIMER_RESET, () => timerService.reset());
   ipcMain.handle(IPC.TIMER_TOGGLE_RUNNING, () => timerService.toggleRunning('focus'));
   ipcMain.handle(IPC.TIMER_GET_STATE, () => timerService.getState());
+  ipcMain.handle(IPC.TIMER_DISMISS_COMPLETION, () => timerService.dismissCompletion());
 
   ipcMain.handle(IPC.TIMER_SET_DURATION, async (_event, payload: unknown) => {
     if (typeof payload !== 'object' || payload === null) {

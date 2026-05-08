@@ -13,6 +13,7 @@ const ALLOWED_SEND_CHANNELS = [
   'timer:toggle-running',
   'timer:get-state',
   'timer:set-duration',
+  'timer:dismiss-completion',
   'settings:get',
   'settings:save',
   'window:hide',

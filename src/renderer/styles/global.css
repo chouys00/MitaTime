@@ -111,7 +111,7 @@ body,
 .completion-overlay {
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: 20;
   display: grid;
   place-items: center;
   pointer-events: none;
@@ -122,6 +122,9 @@ body,
 
 .completion-overlay.is-visible {
   opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
 }
 
 .completion-overlay__card {

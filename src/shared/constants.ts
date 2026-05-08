@@ -12,6 +12,7 @@ export const IPC = {
   TIMER_TOGGLE_RUNNING: 'timer:toggle-running',
   TIMER_GET_STATE: 'timer:get-state',
   TIMER_SET_DURATION: 'timer:set-duration',
+  TIMER_DISMISS_COMPLETION: 'timer:dismiss-completion',
 
   TIMER_TICK: 'timer:tick',
   TIMER_STATE_CHANGED: 'timer:state-changed',
@@ -31,6 +32,7 @@ export type SendChannel =
   | typeof IPC.TIMER_TOGGLE_RUNNING
   | typeof IPC.TIMER_GET_STATE
   | typeof IPC.TIMER_SET_DURATION
+  | typeof IPC.TIMER_DISMISS_COMPLETION
   | typeof IPC.SETTINGS_GET
   | typeof IPC.SETTINGS_SAVE
   | typeof IPC.WINDOW_HIDE
@@ -48,6 +50,7 @@ export const ALLOWED_SEND_CHANNELS: readonly SendChannel[] = [
   IPC.TIMER_TOGGLE_RUNNING,
   IPC.TIMER_GET_STATE,
   IPC.TIMER_SET_DURATION,
+  IPC.TIMER_DISMISS_COMPLETION,
   IPC.SETTINGS_GET,
   IPC.SETTINGS_SAVE,
   IPC.WINDOW_HIDE,

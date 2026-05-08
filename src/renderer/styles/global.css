@@ -16,13 +16,13 @@
   --mode-accent: var(--color-idle-accent);
 
   /* 文字 */
-  --text-primary: rgba(255, 255, 255, 0.92);
-  --text-muted: rgba(255, 255, 255, 0.55);
-  --text-soft: rgba(255, 255, 255, 0.32);
+  --text-primary: rgba(255, 255, 255, 0.97);
+  --text-muted: rgba(255, 255, 255, 0.72);
+  --text-soft: rgba(255, 255, 255, 0.52);
 
-  /* 玻璃 */
-  --glass-bg: rgba(30, 30, 30, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  /* 玻璃（底色不透明一些，字比較清楚） */
+  --glass-bg: rgba(22, 22, 24, 0.88);
+  --glass-border: rgba(255, 255, 255, 0.14);
   --glass-radius: 18px;
 
   font-family:
@@ -81,8 +81,8 @@ body,
   position: absolute;
   inset: 0;
   background: var(--glass-bg);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid var(--glass-border);
   border-radius: var(--glass-radius);
   pointer-events: none;
@@ -90,12 +90,12 @@ body,
   background-image:
     radial-gradient(
       120% 80% at 50% 0%,
-      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.09) 0%,
       transparent 60%
     ),
     radial-gradient(
       80% 60% at 50% 100%,
-      rgb(var(--mode-glow) / 0.08) 0%,
+      rgb(var(--mode-glow) / 0.12) 0%,
       transparent 70%
     );
   transition: background-image 600ms ease;
@@ -180,7 +180,7 @@ body,
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-muted);
-  opacity: 0.65;
+  opacity: 0.92;
   transition: color 400ms ease;
 }
 
@@ -205,7 +205,7 @@ body,
 .progress-bar {
   width: 100%;
   height: 2px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.14);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -257,8 +257,8 @@ body,
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   text-align: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   color: var(--text-primary);
   outline: none;
@@ -275,8 +275,8 @@ body,
 }
 
 .setting-input:focus {
-  border-color: rgb(var(--mode-glow) / 0.6);
-  background: rgba(255, 255, 255, 0.1);
+  border-color: rgb(var(--mode-glow) / 0.7);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .setting-suffix {
@@ -296,9 +296,9 @@ body,
   -webkit-app-region: no-drag;
   height: 32px;
   padding: 0 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
   font-size: 12px;
   letter-spacing: 0.08em;
@@ -312,8 +312,8 @@ body,
 }
 
 .btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .btn:active {
@@ -321,15 +321,15 @@ body,
 }
 
 .btn-primary {
-  background: rgb(var(--mode-glow) / 0.18);
-  border-color: rgb(var(--mode-glow) / 0.45);
+  background: rgb(var(--mode-glow) / 0.26);
+  border-color: rgb(var(--mode-glow) / 0.55);
   color: var(--mode-accent);
-  box-shadow: 0 0 14px rgb(var(--mode-glow) / 0.25);
+  box-shadow: 0 0 14px rgb(var(--mode-glow) / 0.32);
 }
 
 .btn-primary:hover {
-  background: rgb(var(--mode-glow) / 0.28);
-  border-color: rgb(var(--mode-glow) / 0.7);
+  background: rgb(var(--mode-glow) / 0.36);
+  border-color: rgb(var(--mode-glow) / 0.78);
 }
 
 /* ─── Mode 按鈕（開始專注 / 開始休息） ─────────────── */
@@ -342,10 +342,10 @@ body,
 }
 
 .btn-mode.is-active {
-  background: rgb(var(--mode-glow) / 0.22);
-  border-color: rgb(var(--mode-glow) / 0.6);
+  background: rgb(var(--mode-glow) / 0.32);
+  border-color: rgb(var(--mode-glow) / 0.72);
   color: var(--mode-accent);
-  box-shadow: 0 0 12px rgb(var(--mode-glow) / 0.3);
+  box-shadow: 0 0 12px rgb(var(--mode-glow) / 0.38);
 }
 
 /* ─── 控制按鈕（開始 / 暫停 / 重置） ──────────────── */
@@ -366,8 +366,8 @@ body,
   letter-spacing: 0.04em;
   padding: 1px 6px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }

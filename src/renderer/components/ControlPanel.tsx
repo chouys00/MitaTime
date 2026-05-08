@@ -104,8 +104,16 @@ export function ControlPanel({ timer }: Props) {
   const isFocusActive = timer.mode === 'focus';
   const isRestActive = timer.mode === 'rest';
 
+  const dividerProgress =
+    timer.mode === 'idle' || timer.totalMs === 0
+      ? 0
+      : Math.min(100, Math.max(0, ((timer.totalMs - timer.remainingMs) / timer.totalMs) * 100));
+
   return (
     <div className="control-panel">
+      <div className="control-panel__divider" aria-hidden>
+        <div className="control-panel__divider-fill" style={{ width: `${dividerProgress}%` }} />
+      </div>
       <div className="settings-row">
         <label className="setting">
           <span className="setting-label">專注</span>

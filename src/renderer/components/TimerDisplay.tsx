@@ -34,10 +34,10 @@ export function TimerDisplay({ timer }: Props) {
 
   return (
     <div className="timer-display">
-      <div className="timer-label">{label}</div>
       <div className="timer-text" aria-live="polite">
         {formatTime(displayMs)}
       </div>
+      <div className="timer-label">{label}</div>
     </div>
   );
 }

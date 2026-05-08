@@ -3,11 +3,11 @@
  * ───────────────────────────────────────────────────────────── */
 
 :root {
-  /* 排版刻度（略放大字級、收緊冗餘留白） */
+  /* 排版刻度（上區計時區多留垂直空間、下區控制列固定高度） */
   --content-pad-x: 22px;
-  --content-pad-y-top: 6px;
-  --content-pad-y-bottom: 4px;
-  --section-gap: 10px;
+  --content-pad-y-top: 4px;
+  --content-pad-y-bottom: 20px;
+  --section-gap: 0px;
 
   /* 模式色票 */
   --color-focus-glow: 130 215 195; /* 薄荷綠 (rgb 三元組) */
@@ -158,7 +158,8 @@ body,
 .content {
   position: relative;
   z-index: 2;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -167,13 +168,25 @@ body,
   gap: var(--section-gap);
 }
 
+/* 上半：倒數＋進度條吃掉剩餘高度並垂直置中，避免被下方三列按鈕壓扁 */
+.timer-section {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 14px;
+  padding-block: 6px 4px;
+}
+
 /* ─── Timer 顯示 ─────────────────────────────────────── */
 
 .timer-display {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 10px;
 }
 
 .timer-label {
@@ -188,7 +201,7 @@ body,
 .timer-text {
   font-family: 'SF Pro Display', 'Segoe UI', 'Inter', system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  font-weight: 200;
+  font-weight: 600;
   font-size: 62px;
   letter-spacing: 0.04em;
   color: var(--text-primary);
@@ -225,9 +238,14 @@ body,
 /* ─── 控制面板（恆顯，避免初次使用者找不到按鈕） ───── */
 
 .control-panel {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
+  margin-top: 2px;
+  padding-top: 12px;
+  padding-bottom: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;

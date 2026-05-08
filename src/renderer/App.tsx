@@ -28,8 +28,10 @@ export function App() {
       <TitleBar />
 
       <main className="content">
-        <TimerDisplay timer={timer} />
-        <ProgressBar timer={timer} />
+        <section className="timer-section" aria-label="計時">
+          <TimerDisplay timer={timer} />
+          <ProgressBar timer={timer} />
+        </section>
         <ControlPanel timer={timer} />
       </main>
     </div>

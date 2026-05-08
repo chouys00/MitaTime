@@ -148,26 +148,26 @@ export function ControlPanel({ timer }: Props) {
           className={`btn btn-mode ${isFocusActive ? 'is-active' : ''}`}
           onClick={handleStartFocus}
         >
-          [開始專注]
+          開始專注
         </button>
         <button
           type="button"
           className={`btn btn-mode ${isRestActive ? 'is-active' : ''}`}
           onClick={handleStartRest}
         >
-          [開始休息]
+          開始休息
         </button>
       </div>
 
       <div className="buttons-row control-row">
         <button type="button" className="btn btn-control" onClick={handleStart}>
-          開始<span className="kbd-hint">Enter</span>
+          開始
         </button>
         <button type="button" className="btn btn-control" onClick={handlePause}>
-          暫停<span className="kbd-hint">Space</span>
+          暫停
         </button>
         <button type="button" className="btn btn-control" onClick={handleReset}>
-          重置<span className="kbd-hint">Esc</span>
+          重置
         </button>
       </div>
     </div>

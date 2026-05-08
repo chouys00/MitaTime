@@ -24,9 +24,9 @@ function getMainWindow(): BrowserWindow | null {
 function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 460,
-    height: 380,
+    height: 292,
     minWidth: 400,
-    minHeight: 360,
+    minHeight: 268,
     show: false,
     frame: false,
     transparent: true,

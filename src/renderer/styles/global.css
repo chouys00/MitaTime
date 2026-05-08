@@ -3,6 +3,12 @@
  * ───────────────────────────────────────────────────────────── */
 
 :root {
+  /* 排版刻度（略放大字級、收緊冗餘留白） */
+  --content-pad-x: 22px;
+  --content-pad-y-top: 6px;
+  --content-pad-y-bottom: 4px;
+  --section-gap: 10px;
+
   /* 模式色票 */
   --color-focus-glow: 130 215 195; /* 薄荷綠 (rgb 三元組) */
   --color-focus-accent: rgb(130, 215, 195);
@@ -106,12 +112,12 @@ body,
 
 .titlebar {
   position: relative;
-  height: 32px;
+  height: 28px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 10px;
+  padding: 0 8px;
   z-index: 5;
 }
 
@@ -152,13 +158,13 @@ body,
 .content {
   position: relative;
   z-index: 2;
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
-  padding: 6px 28px 18px;
-  gap: 14px;
+  justify-content: flex-start;
+  padding: var(--content-pad-y-top) var(--content-pad-x) var(--content-pad-y-bottom);
+  gap: var(--section-gap);
 }
 
 /* ─── Timer 顯示 ─────────────────────────────────────── */
@@ -167,12 +173,12 @@ body,
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .timer-label {
-  font-size: 11px;
-  letter-spacing: 0.2em;
+  font-size: 13px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-muted);
   opacity: 0.92;
@@ -183,7 +189,7 @@ body,
   font-family: 'SF Pro Display', 'Segoe UI', 'Inter', system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   font-weight: 200;
-  font-size: 56px;
+  font-size: 62px;
   letter-spacing: 0.04em;
   color: var(--text-primary);
   /* 霓虹發光 */
@@ -199,7 +205,7 @@ body,
 
 .progress-bar {
   width: 100%;
-  height: 2px;
+  height: 3px;
   background: rgba(255, 255, 255, 0.14);
   border-radius: 999px;
   overflow: hidden;
@@ -221,7 +227,7 @@ body,
 .control-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
@@ -229,15 +235,15 @@ body,
 
 .settings-row {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   justify-content: center;
 }
 
 .setting {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 13px;
   color: var(--text-muted);
   -webkit-app-region: no-drag;
 }
@@ -247,10 +253,10 @@ body,
 }
 
 .setting-input {
-  width: 48px;
-  height: 26px;
+  width: 50px;
+  height: 28px;
   padding: 0 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   text-align: center;
   background: rgba(255, 255, 255, 0.12);
@@ -278,26 +284,26 @@ body,
 
 .setting-suffix {
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* ─── 按鈕 ─────────────────────────────────────────── */
 
 .buttons-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: center;
 }
 
 .btn {
   -webkit-app-region: no-drag;
-  height: 32px;
-  padding: 0 16px;
+  height: 34px;
+  padding: 0 14px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   cursor: pointer;
   transition:
@@ -333,8 +339,8 @@ body,
 
 .mode-row .btn-mode {
   flex: 1;
-  height: 36px;
-  font-size: 13px;
+  height: 38px;
+  font-size: 14px;
   letter-spacing: 0.04em;
 }
 
@@ -353,13 +359,13 @@ body,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 10px;
-  font-size: 12px;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 13px;
 }
 
 .kbd-hint {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   padding: 1px 6px;
   border-radius: 6px;

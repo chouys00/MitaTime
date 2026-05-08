@@ -108,6 +108,60 @@ body,
   transition: background-image 600ms ease;
 }
 
+.completion-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at center, rgb(var(--mode-glow) / 0.18) 0%, transparent 65%);
+  transition: opacity 220ms ease;
+}
+
+.completion-overlay.is-visible {
+  opacity: 1;
+}
+
+.completion-overlay__card {
+  min-width: 250px;
+  padding: 18px 24px;
+  border-radius: 14px;
+  border: 1px solid rgb(var(--mode-glow) / 0.5);
+  background: rgba(17, 17, 22, 0.88);
+  text-align: center;
+  box-shadow:
+    0 0 0 1px rgb(var(--mode-glow) / 0.14) inset,
+    0 0 28px rgb(var(--mode-glow) / 0.34);
+  animation: completion-overlay-pop 360ms ease;
+}
+
+.completion-overlay__title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--mode-accent);
+}
+
+.completion-overlay__desc {
+  margin-top: 8px;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+@keyframes completion-overlay-pop {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* ─── 標題列（拖曳區與關閉按鈕） ─────────────────────── */
 
 .titlebar {
@@ -187,6 +241,31 @@ body,
   flex-direction: column;
   align-items: center;
   gap: 10px;
+}
+
+.timer-display.is-completed .timer-text {
+  color: var(--mode-accent);
+  text-shadow:
+    0 0 10px rgb(var(--mode-glow) / 0.8),
+    0 0 24px rgb(var(--mode-glow) / 0.6),
+    0 0 46px rgb(var(--mode-glow) / 0.35);
+  animation: timer-complete-pulse 900ms ease-in-out infinite;
+}
+
+.timer-display.is-completed .timer-label {
+  color: var(--mode-accent);
+}
+
+@keyframes timer-complete-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: saturate(1);
+  }
+  50% {
+    transform: scale(1.03);
+    filter: saturate(1.25);
+  }
 }
 
 .timer-label {

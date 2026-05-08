@@ -34,6 +34,7 @@ interface LocalRun {
 }
 
 let localRun: LocalRun | null = null;
+let localCompletionHandle: ReturnType<typeof setTimeout> | null = null;
 
 function stopLocalTick(): void {
   if (localRun?.tickHandle) {
@@ -45,6 +46,10 @@ function stopLocalTick(): void {
 function discardLocalRun(): void {
   stopLocalTick();
   localRun = null;
+  if (localCompletionHandle) {
+    clearTimeout(localCompletionHandle);
+    localCompletionHandle = null;
+  }
 }
 
 function computeLocalRemaining(): number {
@@ -66,14 +71,27 @@ function flushLocalToStore(): void {
 }
 
 function completeLocalRun(): void {
+  if (!localRun) return;
+  const completedMode = localRun.mode;
+  const completedTotalMs = localRun.totalMs;
   discardLocalRun();
   useTimerStore.getState().setTimer({
-    mode: 'idle',
-    totalMs: 0,
+    mode: completedMode,
+    totalMs: completedTotalMs,
     remainingMs: 0,
     isRunning: false,
     isPaused: false,
   });
+  localCompletionHandle = setTimeout(() => {
+    useTimerStore.getState().setTimer({
+      mode: 'idle',
+      totalMs: 0,
+      remainingMs: 0,
+      isRunning: false,
+      isPaused: false,
+    });
+    localCompletionHandle = null;
+  }, 3200);
 }
 
 function localTickOnce(): void {

@@ -184,6 +184,8 @@ class TimerService extends EventEmitter {
       this.notifyFocusEnd();
     }
 
+    this.flashWindowAttention();
+
     this.broadcast();
     this.emitStateChanged();
   }
@@ -249,6 +251,19 @@ class TimerService extends EventEmitter {
 
   private autoStartFocus(): void {
     void this.start('focus');
+  }
+
+  private flashWindowAttention(): void {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed()) continue;
+      win.flashFrame(true);
+      const stopFlash = () => {
+        win.flashFrame(false);
+        win.removeListener('focus', stopFlash);
+      };
+      win.on('focus', stopFlash);
+      setTimeout(stopFlash, 6000);
+    }
   }
 
   private emitStateChanged(): void {

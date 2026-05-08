@@ -1,4 +1,4 @@
-import { BrowserWindow, Notification } from 'electron';
+import { app, BrowserWindow, Notification } from 'electron';
 import { EventEmitter } from 'node:events';
 import type { TimerMode, TimerState } from '../shared/types';
 import { IPC, TICK_INTERVAL_MS } from '../shared/constants';
@@ -178,6 +178,9 @@ class TimerService extends EventEmitter {
     // 鎖定剩餘時間為 0，確保 UI 顯示 00:00
     this.targetTimestamp = Date.now();
 
+    // 關閉到 Tray／最小化時仍須帶出主視窗，與系統通知一併被使用者察覺
+    this.bringWindowsToForeground();
+
     if (completedMode === 'rest') {
       this.notifyRestEnd();
     } else if (completedMode === 'focus') {
@@ -251,6 +254,21 @@ class TimerService extends EventEmitter {
 
   private autoStartFocus(): void {
     void this.start('focus');
+  }
+
+  /** 還原、顯示並聚焦所有應用程式視窗（含關閉到 Tray 的隱藏狀態） */
+  private bringWindowsToForeground(): void {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed()) continue;
+      if (win.isMinimized()) win.restore();
+      if (!win.isVisible()) win.show();
+      win.focus();
+    }
+    if (process.platform === 'darwin') {
+      app.focus({ steal: true });
+    } else {
+      app.focus();
+    }
   }
 
   private flashWindowAttention(): void {

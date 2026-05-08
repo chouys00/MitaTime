@@ -18,11 +18,11 @@ export function ControlPanel({ timer }: Props) {
   const setSettings = useTimerStore((s) => s.setSettings);
 
   const [focusMin, setFocusMin] = useState(() => Math.round(settings.focusSeconds / 60));
-  const [restMin, setRestMin] = useState(() => Math.round(settings.restSeconds / 60));
+  const [restSec, setRestSec] = useState(() => settings.restSeconds);
 
   useEffect(() => {
     setFocusMin(Math.round(settings.focusSeconds / 60));
-    setRestMin(Math.round(settings.restSeconds / 60));
+    setRestSec(settings.restSeconds);
   }, [settings.focusSeconds, settings.restSeconds]);
 
   const commitFocus = async () => {
@@ -36,11 +36,11 @@ export function ControlPanel({ timer }: Props) {
   };
 
   const commitRest = async () => {
-    const value = clamp(restMin, 1, 240);
-    setRestMin(value);
-    if (value * 60 === settings.restSeconds) return;
+    const value = clamp(restSec, 1, 24 * 60 * 60);
+    setRestSec(value);
+    if (value === settings.restSeconds) return;
     const next = (await window.electronAPI.invoke(IPC.SETTINGS_SAVE, {
-      restSeconds: value * 60,
+      restSeconds: value,
     })) as typeof settings;
     setSettings(next);
   };
@@ -100,15 +100,15 @@ export function ControlPanel({ timer }: Props) {
             type="number"
             className="setting-input"
             min={1}
-            max={240}
-            value={restMin}
-            onChange={(e) => setRestMin(Number(e.target.value) || 0)}
+            max={86400}
+            value={restSec}
+            onChange={(e) => setRestSec(Number(e.target.value) || 0)}
             onBlur={commitRest}
             onKeyDown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
             }}
           />
-          <span className="setting-suffix">分</span>
+          <span className="setting-suffix">秒</span>
         </label>
       </div>
 

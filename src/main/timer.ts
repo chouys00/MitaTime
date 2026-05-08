@@ -87,8 +87,38 @@ class TimerService extends EventEmitter {
     return this.pause();
   }
 
-  /** 重置回 idle */
+  /**
+   * 使用者重置：idle 不變；專注／休息則載入該模式設定的完整時長並等同按下暫停（不進行倒數）。
+   */
   reset(): TimerState {
+    if (this.mode === 'idle') {
+      this.stopTickLoop();
+      this.totalMs = 0;
+      this.targetTimestamp = 0;
+      this.pausedRemainingMs = 0;
+      this.isRunning = false;
+      this.isPaused = false;
+      this.emitStateChanged();
+      return this.getState();
+    }
+
+    const settings = settingsStore.get();
+    const seconds = this.mode === 'focus' ? settings.focusSeconds : settings.restSeconds;
+    const totalMs = seconds * 1000;
+
+    this.stopTickLoop();
+    this.totalMs = totalMs;
+    this.pausedRemainingMs = totalMs;
+    this.isPaused = true;
+    this.isRunning = true;
+    this.targetTimestamp = 0;
+
+    this.emitStateChanged();
+    return this.getState();
+  }
+
+  /** 計時完成或流程結束時清空為 idle */
+  private clearToIdle(): TimerState {
     this.stopTickLoop();
     this.mode = 'idle';
     this.totalMs = 0;
@@ -189,11 +219,11 @@ class TimerService extends EventEmitter {
   }
 
   /**
-   * 專注結束 → 系統通知 → 關閉後不自動銜接，回到 reset 狀態
+   * 專注結束 → 系統通知 → 關閉後不自動銜接，回到 idle
    */
   private notifyFocusEnd(): void {
     if (!Notification.isSupported()) {
-      this.reset();
+      this.clearToIdle();
       return;
     }
 
@@ -207,7 +237,7 @@ class TimerService extends EventEmitter {
     const finish = () => {
       if (resolved) return;
       resolved = true;
-      this.reset();
+      this.clearToIdle();
     };
 
     notification.on('click', finish);

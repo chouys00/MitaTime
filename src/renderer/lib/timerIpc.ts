@@ -126,14 +126,43 @@ function localResume(): void {
 }
 
 function localReset(): void {
-  discardLocalRun();
-  useTimerStore.getState().setTimer({
-    mode: 'idle',
-    totalMs: 0,
-    remainingMs: 0,
-    isRunning: false,
-    isPaused: false,
-  });
+  const t = useTimerStore.getState().timer;
+  if (t.mode === 'idle') {
+    discardLocalRun();
+    useTimerStore.getState().setTimer({
+      mode: 'idle',
+      totalMs: 0,
+      remainingMs: 0,
+      isRunning: false,
+      isPaused: false,
+    });
+    return;
+  }
+
+  const settings = useTimerStore.getState().settings;
+  const seconds = t.mode === 'focus' ? settings.focusSeconds : settings.restSeconds;
+  const totalMs = seconds * 1000;
+
+  if (!localRun) {
+    localRun = {
+      mode: t.mode,
+      totalMs,
+      targetTimestamp: 0,
+      pausedRemainingMs: totalMs,
+      isPaused: true,
+      tickHandle: null,
+    };
+    flushLocalToStore();
+    return;
+  }
+
+  stopLocalTick();
+  localRun.totalMs = totalMs;
+  localRun.pausedRemainingMs = totalMs;
+  localRun.isPaused = true;
+  localRun.targetTimestamp = 0;
+  localRun.tickHandle = null;
+  flushLocalToStore();
 }
 
 /**

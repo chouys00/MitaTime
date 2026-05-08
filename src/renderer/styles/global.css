@@ -1,0 +1,373 @@
+/* ─────────────────────────────────────────────────────────────
+ * MitaTime — Dark Glassmorphism Pomodoro
+ * ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* 模式色票 */
+  --color-focus-glow: 130 215 195; /* 薄荷綠 (rgb 三元組) */
+  --color-focus-accent: rgb(130, 215, 195);
+  --color-rest-glow: 255 178 130; /* 琥珀珊瑚 */
+  --color-rest-accent: rgb(255, 178, 130);
+  --color-idle-glow: 220 220 220;
+  --color-idle-accent: rgb(220, 220, 220);
+
+  /* 動態 mode 色（預設為 idle） */
+  --mode-glow: var(--color-idle-glow);
+  --mode-accent: var(--color-idle-accent);
+
+  /* 文字 */
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-muted: rgba(255, 255, 255, 0.55);
+  --text-soft: rgba(255, 255, 255, 0.32);
+
+  /* 玻璃 */
+  --glass-bg: rgba(30, 30, 30, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-radius: 18px;
+
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable', 'Segoe UI', 'PingFang TC',
+    'Microsoft JhengHei', 'Noto Sans TC', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+/* ─── 主要容器 ─────────────────────────────────────────── */
+
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+  border-radius: var(--glass-radius);
+  overflow: hidden;
+  /* 整體呼吸感的微弱發光（透過邊框） */
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.app.mode-focus {
+  --mode-glow: var(--color-focus-glow);
+  --mode-accent: var(--color-focus-accent);
+}
+
+.app.mode-rest {
+  --mode-glow: var(--color-rest-glow);
+  --mode-accent: var(--color-rest-accent);
+}
+
+/* 毛玻璃背景（位於最底層，避免影響 hover 範圍） */
+.glass-surface {
+  position: absolute;
+  inset: 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  pointer-events: none;
+  /* 微妙漸層，讓背景不死板 */
+  background-image:
+    radial-gradient(
+      120% 80% at 50% 0%,
+      rgba(255, 255, 255, 0.06) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      80% 60% at 50% 100%,
+      rgb(var(--mode-glow) / 0.08) 0%,
+      transparent 70%
+    );
+  transition: background-image 600ms ease;
+}
+
+/* ─── 標題列（拖曳區與關閉按鈕） ─────────────────────── */
+
+.titlebar {
+  position: relative;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 10px;
+  z-index: 5;
+}
+
+.titlebar-drag {
+  position: absolute;
+  inset: 0;
+  -webkit-app-region: drag;
+}
+
+.titlebar-btn {
+  -webkit-app-region: no-drag;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.55);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 280ms ease,
+    background 200ms ease,
+    color 200ms ease,
+    transform 200ms ease;
+  position: relative;
+  z-index: 1;
+}
+
+.app.is-hovered .titlebar-btn {
+  opacity: 1;
+}
+
+.titlebar-btn:hover {
+  background: rgba(255, 90, 90, 0.85);
+  color: white;
+  transform: scale(1.05);
+}
+
+/* ─── 內容區 ─────────────────────────────────────────── */
+
+.content {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  padding: 6px 28px 18px;
+  gap: 14px;
+}
+
+/* ─── Timer 顯示 ─────────────────────────────────────── */
+
+.timer-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.timer-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.65;
+  transition: color 400ms ease;
+}
+
+.timer-text {
+  font-family: 'SF Pro Display', 'Segoe UI', 'Inter', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-weight: 200;
+  font-size: 56px;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  /* 霓虹發光 */
+  text-shadow:
+    0 0 6px rgb(var(--mode-glow) / 0.45),
+    0 0 18px rgb(var(--mode-glow) / 0.25),
+    0 0 36px rgb(var(--mode-glow) / 0.15);
+  transition: text-shadow 500ms ease;
+  line-height: 1;
+}
+
+/* ─── 進度條 ─────────────────────────────────────────── */
+
+.progress-bar {
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  background: var(--mode-accent);
+  box-shadow: 0 0 8px rgb(var(--mode-glow) / 0.7);
+  border-radius: 999px;
+  transition:
+    width 350ms linear,
+    background 400ms ease,
+    box-shadow 400ms ease;
+}
+
+/* ─── 控制面板（恆顯，避免初次使用者找不到按鈕） ───── */
+
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.settings-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+}
+
+.setting {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.setting-label {
+  letter-spacing: 0.06em;
+}
+
+.setting-input {
+  width: 48px;
+  height: 26px;
+  padding: 0 6px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-primary);
+  outline: none;
+  transition:
+    border-color 200ms ease,
+    background 200ms ease;
+  -moz-appearance: textfield;
+}
+
+.setting-input::-webkit-outer-spin-button,
+.setting-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.setting-input:focus {
+  border-color: rgb(var(--mode-glow) / 0.6);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.setting-suffix {
+  color: var(--text-soft);
+  font-size: 11px;
+}
+
+/* ─── 按鈕 ─────────────────────────────────────────── */
+
+.buttons-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn {
+  -webkit-app-region: no-drag;
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    transform 120ms ease,
+    color 200ms ease;
+  font-family: inherit;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: rgb(var(--mode-glow) / 0.18);
+  border-color: rgb(var(--mode-glow) / 0.45);
+  color: var(--mode-accent);
+  box-shadow: 0 0 14px rgb(var(--mode-glow) / 0.25);
+}
+
+.btn-primary:hover {
+  background: rgb(var(--mode-glow) / 0.28);
+  border-color: rgb(var(--mode-glow) / 0.7);
+}
+
+/* ─── Mode 按鈕（開始專注 / 開始休息） ─────────────── */
+
+.mode-row .btn-mode {
+  flex: 1;
+  height: 36px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.btn-mode.is-active {
+  background: rgb(var(--mode-glow) / 0.22);
+  border-color: rgb(var(--mode-glow) / 0.6);
+  color: var(--mode-accent);
+  box-shadow: 0 0 12px rgb(var(--mode-glow) / 0.3);
+}
+
+/* ─── 控制按鈕（開始 / 暫停 / 重置） ──────────────── */
+
+.control-row .btn-control {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.kbd-hint {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}

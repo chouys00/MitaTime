@@ -1,5 +1,5 @@
 import { IPC, TICK_INTERVAL_MS } from '../../shared/constants';
-import type { TimerState } from '../../shared/types';
+import type { TimerState, AppSettings } from '../../shared/types';
 import { useTimerStore } from '../store/timerStore';
 
 let warnedNoElectron = false;
@@ -20,6 +20,28 @@ export function getElectronApi(): NonNullable<Window['electronAPI']> | null {
 
 function applyReturnedState(next: TimerState): void {
   useTimerStore.getState().setTimer(next);
+}
+
+/** 儲存設定；無 electronAPI 時僅更新 renderer store（瀏覽器預覽）。 */
+export async function ipcSettingsSave(partial: Partial<AppSettings>): Promise<AppSettings> {
+  const api = getElectronApi();
+  const cur = useTimerStore.getState().settings;
+  if (!api) {
+    const next: AppSettings = {
+      focusSeconds: partial.focusSeconds ?? cur.focusSeconds,
+      restSeconds: partial.restSeconds ?? cur.restSeconds,
+    };
+    useTimerStore.getState().setSettings(next);
+    return next;
+  }
+  try {
+    const next = await api.invoke<AppSettings>(IPC.SETTINGS_SAVE, partial);
+    useTimerStore.getState().setSettings(next);
+    return next;
+  } catch (e) {
+    console.error('[MitaTime] settings:save 失敗', e);
+    return cur;
+  }
 }
 
 // ── 無 electronAPI 時（例如僅用瀏覽器開發伺服器預覽 UI）的輕量倒數 ──

@@ -133,57 +133,9 @@ function createMainWindow(): BrowserWindow {
   return win;
 }
 
-app.whenReady().then(async () => {
-  // 載入持久化設定
-  await settingsStore.load();
-
-  // IPC handlers（在建立視窗之前）
-  registerIpcHandlers(getMainWindow);
-
-  mainWindow = createMainWindow();
-
-  // 系統列
-  createTray(getMainWindow);
-
-  // 全域快捷鍵
-  registerGlobalShortcuts(getMainWindow);
-
-  app.on('activate', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      mainWindow = createMainWindow();
-    } else {
-      mainWindow.show();
-    }
-  });
-});
-
-// 全平台保持背景運行：close 已在 BrowserWindow 攔截為 hide()，
-// 因此除非使用者透過 Tray「退出」（將 isQuitting 設為 true 並 app.quit()），
-// 否則我們不主動退出。
-app.on('window-all-closed', () => {
-  if (flags.isQuitting && process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('before-quit', () => {
-  flags.isQuitting = true;
-});
-
-app.on('will-quit', () => {
-  unregisterGlobalShortcuts();
-  destroyTray();
-});
-
-// 安全：阻擋 <webview> 標籤
-app.on('web-contents-created', (_event, contents) => {
-  contents.on('will-attach-webview', (event) => {
-    event.preventDefault();
-  });
-});
-
-// 確保只有單一實例
+// 確保只有單一實例；未取得鎖則不重複註冊事件與啟動邏輯
 const gotLock = app.requestSingleInstanceLock();
+
 if (!gotLock) {
   app.quit();
 } else {
@@ -193,5 +145,50 @@ if (!gotLock) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
+  });
+
+  app.whenReady().then(async () => {
+    await settingsStore.load();
+
+    registerIpcHandlers(getMainWindow);
+
+    mainWindow = createMainWindow();
+
+    createTray(getMainWindow);
+
+    registerGlobalShortcuts(getMainWindow);
+
+    app.on('activate', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        mainWindow = createMainWindow();
+      } else {
+        mainWindow.show();
+      }
+    });
+  });
+
+  // 全平台保持背景運行：close 已在 BrowserWindow 攔截為 hide()，
+  // 因此除非使用者透過 Tray「退出」（將 isQuitting 設為 true 並 app.quit()），
+  // 否則我們不主動退出。
+  app.on('window-all-closed', () => {
+    if (flags.isQuitting && process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
+
+  app.on('before-quit', () => {
+    flags.isQuitting = true;
+  });
+
+  app.on('will-quit', () => {
+    unregisterGlobalShortcuts();
+    destroyTray();
+  });
+
+  // 安全：阻擋 <webview> 標籤
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('will-attach-webview', (event) => {
+      event.preventDefault();
+    });
   });
 }

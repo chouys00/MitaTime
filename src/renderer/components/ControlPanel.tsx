@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import type { AppSettings, TimerState } from '../../shared/types';
-import { IPC } from '../../shared/constants';
+import type { TimerState } from '../../shared/types';
 import {
+  ipcSettingsSave,
   ipcTimerPause,
   ipcTimerReset,
   ipcTimerResume,
   ipcTimerStart,
-} from '../lib/timerIpc';
-import { useTimerStore } from '../store/timerStore';
+} from '../lib/timerIpc';import { useTimerStore } from '../store/timerStore';
 
 interface Props {
   timer: TimerState;
@@ -15,10 +14,8 @@ interface Props {
 
 export function ControlPanel({ timer }: Props) {
   const settings = useTimerStore((s) => s.settings);
-  const setSettings = useTimerStore((s) => s.setSettings);
 
-  const [focusMin, setFocusMin] = useState(() => Math.round(settings.focusSeconds / 60));
-  const [restSec, setRestSec] = useState(() => settings.restSeconds);
+  const [focusMin, setFocusMin] = useState(() => Math.round(settings.focusSeconds / 60));  const [restSec, setRestSec] = useState(() => settings.restSeconds);
 
   useEffect(() => {
     setFocusMin(Math.round(settings.focusSeconds / 60));
@@ -29,20 +26,14 @@ export function ControlPanel({ timer }: Props) {
     const value = clamp(focusMin, 1, 600);
     setFocusMin(value);
     if (value * 60 === settings.focusSeconds) return;
-    const next = (await window.electronAPI.invoke(IPC.SETTINGS_SAVE, {
-      focusSeconds: value * 60,
-    })) as typeof settings;
-    setSettings(next);
+    await ipcSettingsSave({ focusSeconds: value * 60 });
   };
 
   const commitRest = async () => {
     const value = clamp(restSec, 1, 24 * 60 * 60);
     setRestSec(value);
     if (value === settings.restSeconds) return;
-    const next = (await window.electronAPI.invoke(IPC.SETTINGS_SAVE, {
-      restSeconds: value,
-    })) as typeof settings;
-    setSettings(next);
+    await ipcSettingsSave({ restSeconds: value });
   };
 
   /** 在啟動／重置計時前，把輸入框目前的值寫入 main（避免僅改數字未 blur 時仍用舊設定） */
@@ -56,21 +47,8 @@ export function ControlPanel({ timer }: Props) {
     if (nextFocusSec === cur.focusSeconds && restClamped === cur.restSeconds) {
       return;
     }
-    if (!window.electronAPI) {
-      useTimerStore.getState().setSettings({
-        ...cur,
-        focusSeconds: nextFocusSec,
-        restSeconds: restClamped,
-      });
-      return;
-    }
-    const next = (await window.electronAPI.invoke(IPC.SETTINGS_SAVE, {
-      focusSeconds: nextFocusSec,
-      restSeconds: restClamped,
-    })) as AppSettings;
-    useTimerStore.getState().setSettings(next);
+    await ipcSettingsSave({ focusSeconds: nextFocusSec, restSeconds: restClamped });
   };
-
   const handleStartFocus = async () => {
     await flushPendingSettings();
     await ipcTimerStart('focus');

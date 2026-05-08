@@ -222,9 +222,14 @@ class TimerService extends EventEmitter {
     for (const win of BrowserWindow.getAllWindows()) {
       if (win.isDestroyed()) continue;
       win.flashFrame(true);
+      let done = false;
       const stopFlash = () => {
-        win.flashFrame(false);
+        if (done) return;
+        done = true;
         win.removeListener('focus', stopFlash);
+        if (!win.isDestroyed()) {
+          win.flashFrame(false);
+        }
       };
       win.on('focus', stopFlash);
       setTimeout(stopFlash, 6000);

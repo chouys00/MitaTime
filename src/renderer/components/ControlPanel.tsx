@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { TimerState } from '../../shared/types';
+import type { AppSettings, TimerState } from '../../shared/types';
 import { IPC } from '../../shared/constants';
 import {
   ipcTimerPause,
@@ -45,21 +45,50 @@ export function ControlPanel({ timer }: Props) {
     setSettings(next);
   };
 
-  const handleStartFocus = () => {
-    void ipcTimerStart('focus');
+  /** 在啟動／重置計時前，把輸入框目前的值寫入 main（避免僅改數字未 blur 時仍用舊設定） */
+  const flushPendingSettings = async (): Promise<void> => {
+    const focusClamped = clamp(focusMin, 1, 600);
+    const restClamped = clamp(restSec, 1, 24 * 60 * 60);
+    setFocusMin(focusClamped);
+    setRestSec(restClamped);
+    const nextFocusSec = focusClamped * 60;
+    const cur = useTimerStore.getState().settings;
+    if (nextFocusSec === cur.focusSeconds && restClamped === cur.restSeconds) {
+      return;
+    }
+    if (!window.electronAPI) {
+      useTimerStore.getState().setSettings({
+        ...cur,
+        focusSeconds: nextFocusSec,
+        restSeconds: restClamped,
+      });
+      return;
+    }
+    const next = (await window.electronAPI.invoke(IPC.SETTINGS_SAVE, {
+      focusSeconds: nextFocusSec,
+      restSeconds: restClamped,
+    })) as AppSettings;
+    useTimerStore.getState().setSettings(next);
   };
 
-  const handleStartRest = () => {
-    void ipcTimerStart('rest');
+  const handleStartFocus = async () => {
+    await flushPendingSettings();
+    await ipcTimerStart('focus');
   };
 
-  const handleStart = () => {
+  const handleStartRest = async () => {
+    await flushPendingSettings();
+    await ipcTimerStart('rest');
+  };
+
+  const handleStart = async () => {
     if (timer.isPaused) {
       void ipcTimerResume();
       return;
     }
     if (timer.mode === 'idle') {
-      void ipcTimerStart('focus');
+      await flushPendingSettings();
+      await ipcTimerStart('focus');
     }
   };
 
@@ -67,8 +96,9 @@ export function ControlPanel({ timer }: Props) {
     void ipcTimerPause();
   };
 
-  const handleReset = () => {
-    void ipcTimerReset();
+  const handleReset = async () => {
+    await flushPendingSettings();
+    await ipcTimerReset();
   };
 
   const isFocusActive = timer.mode === 'focus';

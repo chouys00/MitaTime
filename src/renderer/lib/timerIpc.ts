@@ -4,7 +4,7 @@ import { useTimerStore } from '../store/timerStore';
 
 let warnedNoElectron = false;
 
-function getElectronApi(): NonNullable<Window['electronAPI']> | null {
+export function getElectronApi(): NonNullable<Window['electronAPI']> | null {
   const api = window.electronAPI;
   if (!api) {
     if (!warnedNoElectron) {

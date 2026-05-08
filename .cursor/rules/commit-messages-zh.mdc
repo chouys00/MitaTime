@@ -1,0 +1,17 @@
+---
+description: AI 產生的 Git commit message 須使用中文（繁體）
+alwaysApply: true
+---
+
+# Commit message（中文）
+
+當你為此專案建議、撰寫或整理 **Git commit message**（含 Conventional Commits）時：
+
+1. **描述語言**：`type(scope):` 後面的說明文字必須使用 **繁體中文**。
+2. **格式**：維持 **Conventional Commits**，例如 `feat(scope): 簡短說明`。
+3. **範例**：
+   - ✅ `feat(timer): 新增暫停後恢復計時`
+   - ✅ `fix(title-bar): 修正視窗拖曳區與按鈕重疊`
+   - ❌ `feat(timer): add resume after pause`（描述應為中文）
+
+`type`、`scope` 可依專案慣例使用英文短語；**使用者可讀的說明**一律中文。

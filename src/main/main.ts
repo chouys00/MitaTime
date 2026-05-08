@@ -99,6 +99,10 @@ function createMainWindow(): BrowserWindow {
     return { action: 'deny' };
   });
 
+  win.webContents.on('preload-error', (_event, preloadPath, error) => {
+    console.error('[MitaTime] preload-error', preloadPath, error);
+  });
+
   // 載入內容
   if (isDev) {
     void win.loadURL(DEV_SERVER_URL);

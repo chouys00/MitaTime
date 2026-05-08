@@ -1,10 +1,28 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
-import {
-  ALLOWED_SEND_CHANNELS,
-  ALLOWED_RECEIVE_CHANNELS,
-  type SendChannel,
-  type ReceiveChannel,
-} from '../shared/constants';
+import type { ReceiveChannel, SendChannel } from '../shared/constants';
+
+/**
+ * Sandbox preload 內無 __dirname、無法 require 同捆檔、亦無法 require('node:path')。
+ * 下列清單須與 src/shared/constants.ts 的 ALLOWED_* 保持完全一致。
+ */
+const ALLOWED_SEND_CHANNELS = [
+  'timer:start',
+  'timer:pause',
+  'timer:resume',
+  'timer:reset',
+  'timer:toggle-running',
+  'timer:get-state',
+  'timer:set-duration',
+  'settings:get',
+  'settings:save',
+  'window:hide',
+  'window:toggle',
+] as const satisfies readonly SendChannel[];
+
+const ALLOWED_RECEIVE_CHANNELS = [
+  'timer:tick',
+  'timer:state-changed',
+] as const satisfies readonly ReceiveChannel[];
 
 const isAllowedSend = (channel: string): channel is SendChannel =>
   (ALLOWED_SEND_CHANNELS as readonly string[]).includes(channel);

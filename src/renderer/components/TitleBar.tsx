@@ -1,8 +1,11 @@
 import { IPC } from '../../shared/constants';
+import { getElectronApi } from '../lib/timerIpc';
 
 export function TitleBar() {
   const handleClose = () => {
-    void window.electronAPI.invoke(IPC.WINDOW_HIDE);
+    const api = getElectronApi();
+    if (!api) return;
+    void api.invoke(IPC.WINDOW_HIDE);
   };
 
   return (

@@ -58,6 +58,7 @@ body,
   display: flex;
   flex-direction: column;
   color: var(--text-primary);
+  -webkit-app-region: drag;
   border-radius: var(--glass-radius);
   overflow: hidden;
   /* 整體呼吸感的微弱發光（透過邊框） */
@@ -112,12 +113,6 @@ body,
   justify-content: flex-end;
   padding: 0 10px;
   z-index: 5;
-}
-
-.titlebar-drag {
-  position: absolute;
-  inset: 0;
-  -webkit-app-region: drag;
 }
 
 .titlebar-btn {
@@ -244,6 +239,7 @@ body,
   gap: 6px;
   font-size: 12px;
   color: var(--text-muted);
+  -webkit-app-region: no-drag;
 }
 
 .setting-label {
@@ -266,6 +262,7 @@ body,
     border-color 200ms ease,
     background 200ms ease;
   -moz-appearance: textfield;
+  -webkit-app-region: no-drag;
 }
 
 .setting-input::-webkit-outer-spin-button,

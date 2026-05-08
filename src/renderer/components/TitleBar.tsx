@@ -7,7 +7,6 @@ export function TitleBar() {
 
   return (
     <div className="titlebar">
-      <div className="titlebar-drag" />
       <button
         type="button"
         className="titlebar-btn close"

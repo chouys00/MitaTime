@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TimerState } from '../../shared/types';
 import {
   ipcSettingsSave,
@@ -13,11 +13,29 @@ interface Props {
   timer: TimerState;
 }
 
+/** 輸入停止後自動寫入設定，不必 blur／按 Enter */
+const SETTINGS_DEBOUNCE_MS = 400;
+
 export function ControlPanel({ timer }: Props) {
   const settings = useTimerStore((s) => s.settings);
 
   const [focusMin, setFocusMin] = useState(() => Math.round(settings.focusSeconds / 60));
   const [restSec, setRestSec] = useState(() => settings.restSeconds);
+
+  const focusMinRef = useRef(focusMin);
+  const restSecRef = useRef(restSec);
+  focusMinRef.current = focusMin;
+  restSecRef.current = restSec;
+
+  const focusSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (focusSaveTimerRef.current) clearTimeout(focusSaveTimerRef.current);
+      if (restSaveTimerRef.current) clearTimeout(restSaveTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     setFocusMin(Math.round(settings.focusSeconds / 60));
@@ -30,18 +48,52 @@ export function ControlPanel({ timer }: Props) {
     !timer.isRunning &&
     !timer.isPaused;
 
-  const commitFocus = async () => {
-    const value = clamp(focusMin, 1, 600);
+  const commitFocusNow = async (raw: number) => {
+    const value = clamp(raw, 1, 600);
     setFocusMin(value);
-    if (value * 60 === settings.focusSeconds) return;
+    const cur = useTimerStore.getState().settings;
+    if (value * 60 === cur.focusSeconds) return;
     await ipcSettingsSave({ focusSeconds: value * 60 });
   };
 
-  const commitRest = async () => {
-    const value = clamp(restSec, 1, 24 * 60 * 60);
+  const commitRestNow = async (raw: number) => {
+    const value = clamp(raw, 1, 24 * 60 * 60);
     setRestSec(value);
-    if (value === settings.restSeconds) return;
+    const cur = useTimerStore.getState().settings;
+    if (value === cur.restSeconds) return;
     await ipcSettingsSave({ restSeconds: value });
+  };
+
+  const scheduleCommitFocus = () => {
+    if (focusSaveTimerRef.current) clearTimeout(focusSaveTimerRef.current);
+    focusSaveTimerRef.current = setTimeout(() => {
+      focusSaveTimerRef.current = null;
+      void commitFocusNow(focusMinRef.current);
+    }, SETTINGS_DEBOUNCE_MS);
+  };
+
+  const scheduleCommitRest = () => {
+    if (restSaveTimerRef.current) clearTimeout(restSaveTimerRef.current);
+    restSaveTimerRef.current = setTimeout(() => {
+      restSaveTimerRef.current = null;
+      void commitRestNow(restSecRef.current);
+    }, SETTINGS_DEBOUNCE_MS);
+  };
+
+  const flushFocusSave = () => {
+    if (focusSaveTimerRef.current) {
+      clearTimeout(focusSaveTimerRef.current);
+      focusSaveTimerRef.current = null;
+    }
+    void commitFocusNow(focusMinRef.current);
+  };
+
+  const flushRestSave = () => {
+    if (restSaveTimerRef.current) {
+      clearTimeout(restSaveTimerRef.current);
+      restSaveTimerRef.current = null;
+    }
+    void commitRestNow(restSecRef.current);
   };
 
   /** 在啟動／重置計時前，把輸入框目前的值寫入 main（避免僅改數字未 blur 時仍用舊設定） */
@@ -104,10 +156,16 @@ export function ControlPanel({ timer }: Props) {
             min={1}
             max={600}
             value={focusMin}
-            onChange={(e) => setFocusMin(Number(e.target.value) || 0)}
-            onBlur={commitFocus}
+            onChange={(e) => {
+              setFocusMin(Number(e.target.value) || 0);
+              scheduleCommitFocus();
+            }}
+            onBlur={flushFocusSave}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              if (e.key === 'Enter') {
+                flushFocusSave();
+                (e.target as HTMLInputElement).blur();
+              }
             }}
           />
           <span className="setting-suffix">分</span>
@@ -121,10 +179,16 @@ export function ControlPanel({ timer }: Props) {
             min={1}
             max={86400}
             value={restSec}
-            onChange={(e) => setRestSec(Number(e.target.value) || 0)}
-            onBlur={commitRest}
+            onChange={(e) => {
+              setRestSec(Number(e.target.value) || 0);
+              scheduleCommitRest();
+            }}
+            onBlur={flushRestSave}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              if (e.key === 'Enter') {
+                flushRestSave();
+                (e.target as HTMLInputElement).blur();
+              }
             }}
           />
           <span className="setting-suffix">秒</span>

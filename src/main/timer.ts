@@ -1,8 +1,9 @@
-import { app, BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron';
 import { EventEmitter } from 'node:events';
 import type { TimerMode, TimerState } from '../shared/types';
 import { IPC, TICK_INTERVAL_MS } from '../shared/constants';
 import { settingsStore } from './settings-store';
+import { bringBrowserWindowToForeground } from './window-focus';
 
 /**
  * 精準計時器
@@ -210,14 +211,7 @@ class TimerService extends EventEmitter {
   private bringWindowsToForeground(): void {
     for (const win of BrowserWindow.getAllWindows()) {
       if (win.isDestroyed()) continue;
-      if (win.isMinimized()) win.restore();
-      if (!win.isVisible()) win.show();
-      win.focus();
-    }
-    if (process.platform === 'darwin') {
-      app.focus({ steal: true });
-    } else {
-      app.focus();
+      bringBrowserWindowToForeground(win);
     }
   }
 

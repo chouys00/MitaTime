@@ -16,6 +16,9 @@ const isDev = process.env.NODE_ENV === 'development';
 const DEV_SERVER_URL = 'http://localhost:5173';
 const APP_USER_MODEL_ID = 'com.mitatime.app';
 
+// 計時結束等非使用者手勢情境仍須能播放提示音（Chromium 自動播放政策）
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 // Windows：設定 AppUserModelID，否則工作列釘選會抓父行程（electron.exe）的圖示，
 // 並導致同 app 多視窗無法正確分組。必須在所有視窗建立前呼叫。
 if (process.platform === 'win32') {

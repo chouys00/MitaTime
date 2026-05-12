@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { DEFAULT_FOCUS_SECONDS, DEFAULT_REST_SECONDS } from '../../shared/constants';
 import type { TimerState, AppSettings } from '../../shared/types';
 
 interface TimerStore {
@@ -19,8 +20,8 @@ const INITIAL_TIMER: TimerState = {
 };
 
 const INITIAL_SETTINGS: AppSettings = {
-  focusSeconds: 25 * 60,
-  restSeconds: 5 * 60,
+  focusSeconds: DEFAULT_FOCUS_SECONDS,
+  restSeconds: DEFAULT_REST_SECONDS,
 };
 
 export const useTimerStore = create<TimerStore>((set) => ({

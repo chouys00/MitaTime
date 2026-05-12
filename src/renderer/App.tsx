@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { TimerDisplay } from './components/TimerDisplay';
 import { ProgressBar } from './components/ProgressBar';
 import { ControlPanel } from './components/ControlPanel';
@@ -21,6 +21,20 @@ export function App() {
   const isRest = timer.mode === 'rest';
   const isFocus = timer.mode === 'focus';
 
+  const appClassName = useMemo(
+    () => ['app', isFocus && 'mode-focus', isRest && 'mode-rest'].filter(Boolean).join(' '),
+    [isFocus, isRest],
+  );
+
+  const isCompleted = useMemo(
+    () =>
+      timer.mode !== 'idle' &&
+      timer.remainingMs === 0 &&
+      !timer.isRunning &&
+      !timer.isPaused,
+    [timer.mode, timer.remainingMs, timer.isRunning, timer.isPaused],
+  );
+
   const dismissCompletionOverlay = useCallback(() => {
     if (!overlayVisible) return;
     void ipcTimerDismissCompletion();
@@ -28,8 +42,6 @@ export function App() {
 
   useEffect(() => {
     const prev = prevTimerRef.current;
-    const isCompleted =
-      timer.mode !== 'idle' && timer.remainingMs === 0 && !timer.isRunning && !timer.isPaused;
     const cycleKey = isCompleted ? `${timer.mode}:${timer.totalMs}` : null;
     const crossedToCompleted =
       isCompleted &&
@@ -59,7 +71,7 @@ export function App() {
     }
 
     prevTimerRef.current = timer;
-  }, [timer, overlayVisible]);
+  }, [timer, overlayVisible, isCompleted]);
 
   const completionTitle =
     completionMode === 'rest' ? '休息結束' : '專注結束，該休息了';
@@ -72,7 +84,7 @@ export function App() {
   };
 
   return (
-    <div className={`app ${isFocus ? 'mode-focus' : ''} ${isRest ? 'mode-rest' : ''}`}>
+    <div className={appClassName}>
       <div className="glass-surface" />
       <TitleBar />
 
@@ -85,7 +97,7 @@ export function App() {
       </main>
 
       <div
-        className={`completion-overlay ${overlayVisible ? 'is-visible' : ''}`}
+        className={['completion-overlay', overlayVisible && 'is-visible'].filter(Boolean).join(' ')}
         role="button"
         tabIndex={overlayVisible ? 0 : -1}
         aria-hidden={!overlayVisible}
@@ -104,30 +116,50 @@ export function App() {
   );
 }
 
+let completionAudioCtx: AudioContext | null = null;
+
+function getCompletionAudioContext(): AudioContext | null {
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!completionAudioCtx || completionAudioCtx.state === 'closed') {
+    completionAudioCtx = new AudioContextClass();
+  }
+  return completionAudioCtx;
+}
+
 function playCompletionTone(mode: Exclude<TimerMode, 'idle'>): void {
-  const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AudioContextClass) return;
+  const context = getCompletionAudioContext();
+  if (!context) return;
 
-  const context = new AudioContextClass();
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  const now = context.currentTime;
-  const baseFrequency = mode === 'focus' ? 780 : 620;
+  const run = (): void => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const now = context.currentTime;
+    const baseFrequency = mode === 'focus' ? 780 : 620;
 
-  oscillator.type = 'triangle';
-  oscillator.frequency.setValueAtTime(baseFrequency, now);
-  oscillator.frequency.exponentialRampToValueAtTime(baseFrequency * 1.22, now + 0.18);
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(baseFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(baseFrequency * 1.22, now + 0.18);
 
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.18, now + 0.03);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
 
-  oscillator.connect(gain);
-  gain.connect(context.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 0.36);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.36);
+  };
 
-  window.setTimeout(() => {
-    void context.close();
-  }, 450);
+  void (async () => {
+    try {
+      if (context.state === 'closed') return;
+      await context.resume();
+    } catch {
+      return;
+    }
+    run();
+  })();
 }

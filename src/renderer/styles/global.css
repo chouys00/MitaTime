@@ -93,7 +93,15 @@ body,
   border: 1px solid var(--glass-border);
   border-radius: var(--glass-radius);
   pointer-events: none;
-  /* 微妙漸層，讓背景不死板 */
+}
+
+/* 漸層疊在實色底上（background-image 無法可靠地做 transition） */
+.glass-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
   background-image:
     radial-gradient(
       120% 80% at 50% 0%,
@@ -105,7 +113,6 @@ body,
       rgb(var(--mode-glow) / 0.12) 0%,
       transparent 70%
     );
-  transition: background-image 600ms ease;
 }
 
 .completion-overlay {
@@ -442,6 +449,17 @@ body,
 
 .btn:active {
   transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+}
+
+.btn:disabled:active {
+  transform: none;
 }
 
 .btn-primary {

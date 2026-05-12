@@ -6,7 +6,9 @@ import {
   ipcTimerReset,
   ipcTimerResume,
   ipcTimerStart,
-} from '../lib/timerIpc';import { useTimerStore } from '../store/timerStore';
+} from '../lib/timerIpc';
+import { getTimerProgressPercent } from '../lib/timerProgress';
+import { useTimerStore } from '../store/timerStore';
 
 interface Props {
   timer: TimerState;
@@ -15,12 +17,19 @@ interface Props {
 export function ControlPanel({ timer }: Props) {
   const settings = useTimerStore((s) => s.settings);
 
-  const [focusMin, setFocusMin] = useState(() => Math.round(settings.focusSeconds / 60));  const [restSec, setRestSec] = useState(() => settings.restSeconds);
+  const [focusMin, setFocusMin] = useState(() => Math.round(settings.focusSeconds / 60));
+  const [restSec, setRestSec] = useState(() => settings.restSeconds);
 
   useEffect(() => {
     setFocusMin(Math.round(settings.focusSeconds / 60));
     setRestSec(settings.restSeconds);
   }, [settings.focusSeconds, settings.restSeconds]);
+
+  const isCompletionHold =
+    timer.mode !== 'idle' &&
+    timer.remainingMs === 0 &&
+    !timer.isRunning &&
+    !timer.isPaused;
 
   const commitFocus = async () => {
     const value = clamp(focusMin, 1, 600);
@@ -49,14 +58,10 @@ export function ControlPanel({ timer }: Props) {
     }
     await ipcSettingsSave({ focusSeconds: nextFocusSec, restSeconds: restClamped });
   };
-  const handleStartFocus = async () => {
-    await flushPendingSettings();
-    await ipcTimerStart('focus');
-  };
 
-  const handleStartRest = async () => {
+  const handleStartMode = async (mode: 'focus' | 'rest') => {
     await flushPendingSettings();
-    await ipcTimerStart('rest');
+    await ipcTimerStart(mode);
   };
 
   const handleStart = async () => {
@@ -82,10 +87,14 @@ export function ControlPanel({ timer }: Props) {
   const isFocusActive = timer.mode === 'focus';
   const isRestActive = timer.mode === 'rest';
 
-  const dividerProgress =
-    timer.mode === 'idle' || timer.totalMs === 0
-      ? 0
-      : Math.min(100, Math.max(0, ((timer.totalMs - timer.remainingMs) / timer.totalMs) * 100));
+  const dividerProgress = getTimerProgressPercent(timer);
+
+  const canStart = timer.mode === 'idle' || timer.isPaused;
+  const canPause =
+    timer.mode !== 'idle' &&
+    timer.isRunning &&
+    !timer.isPaused &&
+    !isCompletionHold;
 
   return (
     <div className="control-panel">
@@ -132,27 +141,27 @@ export function ControlPanel({ timer }: Props) {
         <button
           type="button"
           className={`btn btn-mode ${isFocusActive ? 'is-active' : ''}`}
-          onClick={handleStartFocus}
+          onClick={() => void handleStartMode('focus')}
         >
           開始專注
         </button>
         <button
           type="button"
           className={`btn btn-mode ${isRestActive ? 'is-active' : ''}`}
-          onClick={handleStartRest}
+          onClick={() => void handleStartMode('rest')}
         >
           開始休息
         </button>
       </div>
 
       <div className="buttons-row control-row">
-        <button type="button" className="btn btn-control" onClick={handleStart}>
+        <button type="button" className="btn btn-control" onClick={() => void handleStart()} disabled={!canStart}>
           開始
         </button>
-        <button type="button" className="btn btn-control" onClick={handlePause}>
+        <button type="button" className="btn btn-control" onClick={handlePause} disabled={!canPause}>
           暫停
         </button>
-        <button type="button" className="btn btn-control" onClick={handleReset}>
+        <button type="button" className="btn btn-control" onClick={() => void handleReset()}>
           重置
         </button>
       </div>

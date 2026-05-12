@@ -130,14 +130,17 @@ class TimerService extends EventEmitter {
     return this.getState();
   }
 
+  /** 對所有尚未銷毀的視窗執行回呼 */
+  private forEachAliveWindow(cb: (win: BrowserWindow) => void): void {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) cb(win);
+    }
+  }
+
   /** 廣播當前狀態到所有渲染進程 */
   broadcast(): void {
     const state = this.getState();
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send(IPC.TIMER_TICK, state);
-      }
-    }
+    this.forEachAliveWindow((win) => win.webContents.send(IPC.TIMER_TICK, state));
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -238,11 +241,9 @@ class TimerService extends EventEmitter {
 
   private emitStateChanged(): void {
     const state = this.getState();
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send(IPC.TIMER_STATE_CHANGED, state);
-      }
-    }
+    this.forEachAliveWindow((win) =>
+      win.webContents.send(IPC.TIMER_STATE_CHANGED, state),
+    );
     this.emit('state-changed', state);
   }
 }

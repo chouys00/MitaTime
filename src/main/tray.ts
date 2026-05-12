@@ -4,7 +4,7 @@ import path from 'node:path';
 let trayInstance: Tray | null = null;
 
 export function createTray(getMainWindow: () => BrowserWindow | null): Tray {
-  const iconPath = path.join(__dirname, '../../resources/tray-cat-icon.png');
+  const iconPath = path.join(__dirname, '../../resources/icon.png');
   let icon = nativeImage.createFromPath(iconPath);
   if (icon.isEmpty()) {
     icon = nativeImage.createEmpty();

@@ -9,6 +9,10 @@ import { ipcTimerDismissCompletion } from './lib/timerIpc';
 import { useTimerStore } from './store/timerStore';
 import type { TimerMode, TimerState } from '../shared/types';
 
+// 音效：Wikimedia Commons「Meow.ogg」— Dan Crosby，CC BY-SA 3.0
+// https://commons.wikimedia.org/wiki/File:Meow.ogg
+import completionMeowUrl from './assets/completion-meow.ogg?url';
+
 export function App() {
   useElectronBridge();
   useKeyboardShortcuts();
@@ -59,7 +63,7 @@ export function App() {
       completedCycleRef.current = cycleKey;
       setCompletionMode(timer.mode);
       setOverlayVisible(true);
-      playCompletionTone(timer.mode);
+      playCompletionMeow();
     }
 
     if (overlayVisible && !isCompleted) {
@@ -116,50 +120,15 @@ export function App() {
   );
 }
 
-let completionAudioCtx: AudioContext | null = null;
+let completionMeowAudio: HTMLAudioElement | null = null;
 
-function getCompletionAudioContext(): AudioContext | null {
-  const AudioContextClass =
-    window.AudioContext ||
-    (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AudioContextClass) return null;
-  if (!completionAudioCtx || completionAudioCtx.state === 'closed') {
-    completionAudioCtx = new AudioContextClass();
+function playCompletionMeow(): void {
+  if (!completionMeowAudio) {
+    completionMeowAudio = new Audio(completionMeowUrl);
+    completionMeowAudio.preload = 'auto';
   }
-  return completionAudioCtx;
-}
-
-function playCompletionTone(mode: Exclude<TimerMode, 'idle'>): void {
-  const context = getCompletionAudioContext();
-  if (!context) return;
-
-  const run = (): void => {
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    const now = context.currentTime;
-    const baseFrequency = mode === 'focus' ? 780 : 620;
-
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(baseFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(baseFrequency * 1.22, now + 0.18);
-
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start(now);
-    oscillator.stop(now + 0.36);
-  };
-
-  void (async () => {
-    try {
-      if (context.state === 'closed') return;
-      await context.resume();
-    } catch {
-      return;
-    }
-    run();
-  })();
+  completionMeowAudio.currentTime = 0;
+  void completionMeowAudio.play().catch(() => {
+    /* 自動播放被瀏覽器擋下時略過 */
+  });
 }

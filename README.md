@@ -99,3 +99,7 @@ pnpm package
 ## License
 
 MIT
+
+### 第三方素材
+
+- 倒數完成提示音：[Meow.ogg](https://commons.wikimedia.org/wiki/File:Meow.ogg)（Dan Crosby，[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/deed.en)）

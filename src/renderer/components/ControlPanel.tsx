@@ -7,7 +7,6 @@ import {
   ipcTimerResume,
   ipcTimerStart,
 } from '../lib/timerIpc';
-import { getTimerProgressPercent } from '../lib/timerProgress';
 import { useTimerStore } from '../store/timerStore';
 
 interface Props {
@@ -87,8 +86,6 @@ export function ControlPanel({ timer }: Props) {
   const isFocusActive = timer.mode === 'focus';
   const isRestActive = timer.mode === 'rest';
 
-  const dividerProgress = getTimerProgressPercent(timer);
-
   const canStart = timer.mode === 'idle' || timer.isPaused;
   const canPause =
     timer.mode !== 'idle' &&
@@ -98,9 +95,6 @@ export function ControlPanel({ timer }: Props) {
 
   return (
     <div className="control-panel">
-      <div className="control-panel__divider" aria-hidden>
-        <div className="control-panel__divider-fill" style={{ width: `${dividerProgress}%` }} />
-      </div>
       <div className="settings-row">
         <label className="setting">
           <span className="setting-label">專注</span>

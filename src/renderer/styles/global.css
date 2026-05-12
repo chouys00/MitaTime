@@ -342,33 +342,6 @@ body,
   pointer-events: auto;
 }
 
-/* 區塊間分隔線：與計時進度同步的微光進度感（對齊舊版 border-top + padding-top 的視覺節奏） */
-.control-panel__divider {
-  width: 100%;
-  height: 2px;
-  margin-bottom: 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.control-panel__divider-fill {
-  height: 100%;
-  border-radius: 999px;
-  max-width: 100%;
-  background: var(--mode-accent);
-  opacity: 0.42;
-  box-shadow:
-    0 0 4px rgb(var(--mode-glow) / 0.35),
-    0 0 12px rgb(var(--mode-glow) / 0.15);
-  transition:
-    width 350ms linear,
-    opacity 380ms ease,
-    background 400ms ease,
-    box-shadow 400ms ease;
-}
-
 .settings-row {
   display: flex;
   gap: 10px;

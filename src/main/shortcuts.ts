@@ -4,8 +4,8 @@ import { timerService } from './timer';
 const SHORTCUTS = {
   START_REST: 'CommandOrControl+Alt+Right',
   START_FOCUS: 'CommandOrControl+Alt+Left',
-  TOGGLE_WINDOW: 'CommandOrControl+Alt+O',
-  RESET: 'CommandOrControl+Alt+R',
+  TOGGLE_WINDOW: 'CommandOrControl+Alt+Up',
+  RESET: 'CommandOrControl+Alt+Down',
   PAUSE: 'CommandOrControl+Alt+P',
 } as const;
 

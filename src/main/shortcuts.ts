@@ -1,4 +1,4 @@
-import { globalShortcut, BrowserWindow } from 'electron';
+import { app, globalShortcut, BrowserWindow } from 'electron';
 import { timerService } from './timer';
 
 const SHORTCUTS = {
@@ -10,15 +10,20 @@ const SHORTCUTS = {
 } as const;
 
 /**
- * 確保視窗顯示後再執行動作。
- * 對應需求：①、②、④、⑤ 觸發時若視窗隱藏需先 show，然後再透過 IPC（state 變化）通知 Renderer。
+ * 將主視窗喚到前景：還原最小化、必要時 show，並盡力從其它應用程式之下取回焦點。
+ * 與 Cmd/Ctrl+Alt+Up 一致：僅檢查 isVisible 不夠，被壓在底下的視窗仍 isVisible===true。
  */
-function ensureVisible(getMainWindow: () => BrowserWindow | null): void {
+function focusMainWindow(getMainWindow: () => BrowserWindow | null): void {
   const win = getMainWindow();
   if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) {
+    win.restore();
+  }
   if (!win.isVisible()) {
     win.show();
   }
+  app.focus({ steal: true });
+  win.focus();
 }
 
 export function registerGlobalShortcuts(getMainWindow: () => BrowserWindow | null): void {
@@ -26,13 +31,13 @@ export function registerGlobalShortcuts(getMainWindow: () => BrowserWindow | nul
 
   // ① 開始休息
   globalShortcut.register(SHORTCUTS.START_REST, () => {
-    ensureVisible(getMainWindow);
+    focusMainWindow(getMainWindow);
     void timerService.start('rest');
   });
 
   // ② 開始專注
   globalShortcut.register(SHORTCUTS.START_FOCUS, () => {
-    ensureVisible(getMainWindow);
+    focusMainWindow(getMainWindow);
     void timerService.start('focus');
   });
 
@@ -43,20 +48,19 @@ export function registerGlobalShortcuts(getMainWindow: () => BrowserWindow | nul
     if (win.isVisible() && win.isFocused()) {
       win.hide();
     } else {
-      win.show();
-      win.focus();
+      focusMainWindow(getMainWindow);
     }
   });
 
   // ④ 重置
   globalShortcut.register(SHORTCUTS.RESET, () => {
-    ensureVisible(getMainWindow);
+    focusMainWindow(getMainWindow);
     timerService.reset();
   });
 
   // ⑤ 暫停（同時支援切換暫停/恢復）
   globalShortcut.register(SHORTCUTS.PAUSE, () => {
-    ensureVisible(getMainWindow);
+    focusMainWindow(getMainWindow);
     void timerService.toggleRunning('focus');
   });
 }

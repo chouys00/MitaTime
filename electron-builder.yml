@@ -13,11 +13,18 @@ asar: true
 compression: maximum
 
 win:
+  # 維持 false 以略過簽章流程（避免 winCodeSign cache 解壓時遇 symlink 權限錯誤）。
+  # 此 flag 同時也會關閉 rcedit 編輯，因此 exe 中繼資料 / 圖示改由 scripts/after-pack.js
+  # 透過 rcedit 自行寫入。Portable 包裝外殼的圖示則由 NSIS 編譯期讀取 icon.ico 處理。
   signAndEditExecutable: false
   target:
     - target: portable
       arch: [x64]
-  icon: resources/icon.png
+  icon: resources/icon.ico
+
+# 解壓階段後（產出 win-unpacked）執行：用 rcedit 把 ProductName / 圖示 / 版本
+# 寫入內部 MitaTime.exe；再由 NSIS portable 步驟以同份 icon.ico 打包成外層 exe。
+afterPack: scripts/after-pack.js
 
 mac:
   category: public.app-category.productivity

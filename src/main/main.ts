@@ -14,6 +14,20 @@ flags.isQuitting = false;
 
 const isDev = process.env.NODE_ENV === 'development';
 const DEV_SERVER_URL = 'http://localhost:5173';
+const APP_USER_MODEL_ID = 'com.mitatime.app';
+
+// Windows：設定 AppUserModelID，否則工作列釘選會抓父行程（electron.exe）的圖示，
+// 並導致同 app 多視窗無法正確分組。必須在所有視窗建立前呼叫。
+if (process.platform === 'win32') {
+  app.setAppUserModelId(APP_USER_MODEL_ID);
+}
+
+function resolveAppIcon(): string {
+  // Windows 在工作列與 .exe 內嵌圖示使用 .ico（多解析度）較穩定；
+  // macOS / Linux 直接使用 PNG。
+  const iconFile = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+  return path.join(__dirname, '../../resources', iconFile);
+}
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -37,7 +51,7 @@ function createMainWindow(): BrowserWindow {
     // 透明無框視窗在 Windows 上，系統陰影仍依矩形繪製，與 CSS 圓角疊加會像「外緣凸出一圈」
     hasShadow: process.platform !== 'win32',
     skipTaskbar: false,
-    icon: path.join(__dirname, '../../resources/icon.png'),
+    icon: resolveAppIcon(),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

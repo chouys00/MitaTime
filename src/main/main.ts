@@ -34,7 +34,8 @@ function createMainWindow(): BrowserWindow {
     maximizable: false,
     fullscreenable: false,
     backgroundColor: '#00000000',
-    hasShadow: true,
+    // 透明無框視窗在 Windows 上，系統陰影仍依矩形繪製，與 CSS 圓角疊加會像「外緣凸出一圈」
+    hasShadow: process.platform !== 'win32',
     skipTaskbar: false,
     icon: path.join(__dirname, '../../resources/icon.png'),
     webPreferences: {

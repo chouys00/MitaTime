@@ -13,15 +13,11 @@ asar: true
 compression: maximum
 
 win:
+  signAndEditExecutable: false
   target:
-    - target: nsis
+    - target: portable
       arch: [x64]
   icon: resources/icon.png
-
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  perMachine: false
 
 mac:
   category: public.app-category.productivity

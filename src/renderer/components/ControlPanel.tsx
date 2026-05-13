@@ -19,13 +19,14 @@ const SETTINGS_DEBOUNCE_MS = 400;
 export function ControlPanel({ timer }: Props) {
   const settings = useTimerStore((s) => s.settings);
 
-  const [focusMin, setFocusMin] = useState(() => Math.round(settings.focusSeconds / 60));
-  const [restSec, setRestSec] = useState(() => settings.restSeconds);
+  /** 以字串儲存，避免清空或輸入途中被 clamp 成 1 洗掉內容 */
+  const [focusMinStr, setFocusMinStr] = useState(() => String(Math.round(settings.focusSeconds / 60)));
+  const [restSecStr, setRestSecStr] = useState(() => String(settings.restSeconds));
 
-  const focusMinRef = useRef(focusMin);
-  const restSecRef = useRef(restSec);
-  focusMinRef.current = focusMin;
-  restSecRef.current = restSec;
+  const focusMinStrRef = useRef(focusMinStr);
+  const restSecStrRef = useRef(restSecStr);
+  focusMinStrRef.current = focusMinStr;
+  restSecStrRef.current = restSecStr;
 
   const focusSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,8 +39,8 @@ export function ControlPanel({ timer }: Props) {
   }, []);
 
   useEffect(() => {
-    setFocusMin(Math.round(settings.focusSeconds / 60));
-    setRestSec(settings.restSeconds);
+    setFocusMinStr(String(Math.round(settings.focusSeconds / 60)));
+    setRestSecStr(String(settings.restSeconds));
   }, [settings.focusSeconds, settings.restSeconds]);
 
   const isCompletionHold =
@@ -48,17 +49,21 @@ export function ControlPanel({ timer }: Props) {
     !timer.isRunning &&
     !timer.isPaused;
 
-  const commitFocusNow = async (raw: number) => {
-    const value = clamp(raw, 1, 600);
-    setFocusMin(value);
+  const commitFocusNow = async (rawStr: string) => {
+    const parsed = parsePositiveInt(rawStr);
+    if (parsed === null) return;
+    const value = clamp(parsed, 1, 600);
+    setFocusMinStr(String(value));
     const cur = useTimerStore.getState().settings;
     if (value * 60 === cur.focusSeconds) return;
     await ipcSettingsSave({ focusSeconds: value * 60 });
   };
 
-  const commitRestNow = async (raw: number) => {
-    const value = clamp(raw, 1, 24 * 60 * 60);
-    setRestSec(value);
+  const commitRestNow = async (rawStr: string) => {
+    const parsed = parsePositiveInt(rawStr);
+    if (parsed === null) return;
+    const value = clamp(parsed, 1, 24 * 60 * 60);
+    setRestSecStr(String(value));
     const cur = useTimerStore.getState().settings;
     if (value === cur.restSeconds) return;
     await ipcSettingsSave({ restSeconds: value });
@@ -68,7 +73,7 @@ export function ControlPanel({ timer }: Props) {
     if (focusSaveTimerRef.current) clearTimeout(focusSaveTimerRef.current);
     focusSaveTimerRef.current = setTimeout(() => {
       focusSaveTimerRef.current = null;
-      void commitFocusNow(focusMinRef.current);
+      void commitFocusNow(focusMinStrRef.current);
     }, SETTINGS_DEBOUNCE_MS);
   };
 
@@ -76,7 +81,7 @@ export function ControlPanel({ timer }: Props) {
     if (restSaveTimerRef.current) clearTimeout(restSaveTimerRef.current);
     restSaveTimerRef.current = setTimeout(() => {
       restSaveTimerRef.current = null;
-      void commitRestNow(restSecRef.current);
+      void commitRestNow(restSecStrRef.current);
     }, SETTINGS_DEBOUNCE_MS);
   };
 
@@ -85,7 +90,13 @@ export function ControlPanel({ timer }: Props) {
       clearTimeout(focusSaveTimerRef.current);
       focusSaveTimerRef.current = null;
     }
-    void commitFocusNow(focusMinRef.current);
+    const raw = focusMinStrRef.current;
+    if (parsePositiveInt(raw) === null) {
+      const cur = useTimerStore.getState().settings;
+      setFocusMinStr(String(Math.round(cur.focusSeconds / 60)));
+      return;
+    }
+    void commitFocusNow(raw);
   };
 
   const flushRestSave = () => {
@@ -93,17 +104,26 @@ export function ControlPanel({ timer }: Props) {
       clearTimeout(restSaveTimerRef.current);
       restSaveTimerRef.current = null;
     }
-    void commitRestNow(restSecRef.current);
+    const raw = restSecStrRef.current;
+    if (parsePositiveInt(raw) === null) {
+      const cur = useTimerStore.getState().settings;
+      setRestSecStr(String(cur.restSeconds));
+      return;
+    }
+    void commitRestNow(raw);
   };
 
   /** 在啟動／重置計時前，把輸入框目前的值寫入 main（避免僅改數字未 blur 時仍用舊設定） */
   const flushPendingSettings = async (): Promise<void> => {
-    const focusClamped = clamp(focusMin, 1, 600);
-    const restClamped = clamp(restSec, 1, 24 * 60 * 60);
-    setFocusMin(focusClamped);
-    setRestSec(restClamped);
-    const nextFocusSec = focusClamped * 60;
     const cur = useTimerStore.getState().settings;
+    const focusParsed = parsePositiveInt(focusMinStr);
+    const restParsed = parsePositiveInt(restSecStr);
+    const focusClamped = focusParsed !== null ? clamp(focusParsed, 1, 600) : Math.round(cur.focusSeconds / 60);
+    const restClamped =
+      restParsed !== null ? clamp(restParsed, 1, 24 * 60 * 60) : cur.restSeconds;
+    setFocusMinStr(String(focusClamped));
+    setRestSecStr(String(restClamped));
+    const nextFocusSec = focusClamped * 60;
     if (nextFocusSec === cur.focusSeconds && restClamped === cur.restSeconds) {
       return;
     }
@@ -155,9 +175,9 @@ export function ControlPanel({ timer }: Props) {
             className="setting-input"
             min={1}
             max={600}
-            value={focusMin}
+            value={focusMinStr}
             onChange={(e) => {
-              setFocusMin(Number(e.target.value) || 0);
+              setFocusMinStr(e.target.value);
               scheduleCommitFocus();
             }}
             onBlur={flushFocusSave}
@@ -178,9 +198,9 @@ export function ControlPanel({ timer }: Props) {
             className="setting-input"
             min={1}
             max={86400}
-            value={restSec}
+            value={restSecStr}
             onChange={(e) => {
-              setRestSec(Number(e.target.value) || 0);
+              setRestSecStr(e.target.value);
               scheduleCommitRest();
             }}
             onBlur={flushRestSave}
@@ -230,4 +250,15 @@ export function ControlPanel({ timer }: Props) {
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(max, Math.floor(value)));
+}
+
+/** 可寫入設定的正整數；空白或尚未形成 ≥1 的數字時回 null（不觸發 clamp / 儲存） */
+function parsePositiveInt(raw: string): number | null {
+  const t = raw.trim();
+  if (t === '') return null;
+  const n = Number(t);
+  if (!Number.isFinite(n)) return null;
+  const intVal = Math.trunc(n);
+  if (intVal < 1) return null;
+  return intVal;
 }

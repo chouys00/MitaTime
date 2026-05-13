@@ -46,6 +46,22 @@ export function App() {
 
   useEffect(() => {
     const prev = prevTimerRef.current;
+    // 自「結束並停表」再起同模式新的一輪時 mode 仍為 focus/rest，
+    // 僅藉 mode／idle 無法清空 completedCycleRef，會導致下次完成時同一 cycleKey 被略過音效／overlay。
+    if (
+      prev &&
+      timer.mode !== 'idle' &&
+      timer.isRunning &&
+      !timer.isPaused &&
+      timer.remainingMs > 0 &&
+      prev.remainingMs === 0 &&
+      !prev.isRunning &&
+      !prev.isPaused &&
+      prev.mode === timer.mode
+    ) {
+      completedCycleRef.current = null;
+    }
+
     const cycleKey = isCompleted ? `${timer.mode}:${timer.totalMs}` : null;
     const crossedToCompleted =
       isCompleted &&
@@ -120,14 +136,10 @@ export function App() {
   );
 }
 
-let completionMeowAudio: HTMLAudioElement | null = null;
-
 function playCompletionMeow(): void {
-  if (!completionMeowAudio) {
-    completionMeowAudio = new Audio(completionMeowUrl);
-    completionMeowAudio.preload = 'auto';
-  }
-  completionMeowAudio.currentTime = 0;
+  // 每次新建 Audio，避免單例在 play() 曾被拒絕後進入錯誤狀態，導致之後即使具使用者手勢也無法出聲
+  const completionMeowAudio = new Audio(completionMeowUrl);
+  completionMeowAudio.preload = 'auto';
   void completionMeowAudio.play().catch(() => {
     /* 自動播放被瀏覽器擋下時略過 */
   });

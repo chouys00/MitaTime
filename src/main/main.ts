@@ -63,6 +63,9 @@ function createMainWindow(): BrowserWindow {
       webSecurity: true,
       allowRunningInsecureContent: false,
       experimentalFeatures: false,
+      autoplayPolicy: 'no-user-gesture-required',
+      // 縮小／非前景時仍讓計時與媒體回呼正常（避免背景節流導致完成提示異常）
+      backgroundThrottling: false,
     },
   });
 

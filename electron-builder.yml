@@ -18,9 +18,22 @@ win:
   # 透過 rcedit 自行寫入。Portable 包裝外殼的圖示則由 NSIS 編譯期讀取 icon.ico 處理。
   signAndEditExecutable: false
   target:
+    # nsis 安裝版：安裝到固定路徑並建立帶 AppUserModelID 的開始選單捷徑，
+    # 工作列釘選才能在重開機後保留（portable 每次解壓到隨機暫存目錄，釘選必失效）
+    - target: nsis
+      arch: [x64]
     - target: portable
       arch: [x64]
   icon: resources/icon.ico
+
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: MitaTime
+  artifactName: ${productName}-Setup-${version}.${ext}
+  deleteAppDataOnUninstall: false
 
 # 解壓階段後（產出 win-unpacked）執行：用 rcedit 把 ProductName / 圖示 / 版本
 # 寫入內部 MitaTime.exe；再由 NSIS portable 步驟以同份 icon.ico 打包成外層 exe。

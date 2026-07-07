@@ -7,5 +7,6 @@ release/
 *.log
 .vscode/
 .idea/
+.claude/
 resources/icon.png
 resources/icon.ico

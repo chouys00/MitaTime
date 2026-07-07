@@ -8,15 +8,24 @@
   "private": true,
   "scripts": {
     "generate-icon": "node scripts/generate-icon.js",
-    "build:main": "tsc -p tsconfig.main.json",
+    "build:main": "tsc -p tsconfig.main.json && pnpm build:preload",
+    "build:preload": "esbuild src/preload/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload/preload.js --sourcemap",
     "build:renderer": "vite build",
     "build": "pnpm generate-icon && pnpm build:main && pnpm build:renderer",
     "dev:vite": "vite",
     "dev:electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
     "dev": "pnpm generate-icon && pnpm build:main && concurrently -k -n vite,electron -c blue,magenta \"pnpm dev:vite\" \"pnpm dev:electron\"",
     "start": "pnpm build && electron .",
+    "test": "vitest run",
     "type-check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.main.json --noEmit",
     "package": "pnpm build && electron-builder --config electron-builder.yml"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "sharp"
+    ]
   },
   "dependencies": {
     "zustand": "^5.0.2"
@@ -30,6 +39,7 @@
     "cross-env": "^7.0.3",
     "electron": "^33.2.1",
     "electron-builder": "^26.8.1",
+    "esbuild": "^0.28.1",
     "png-to-ico": "^3.0.1",
     "rcedit": "^5.0.2",
     "react": "^18.3.1",
@@ -37,6 +47,7 @@
     "sharp": "^0.34.5",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
+    "vitest": "^3.2.4",
     "wait-on": "^8.0.1"
   }
 }

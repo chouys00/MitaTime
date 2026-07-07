@@ -43,12 +43,6 @@ export function ControlPanel({ timer }: Props) {
     setRestSecStr(String(settings.restSeconds));
   }, [settings.focusSeconds, settings.restSeconds]);
 
-  const isCompletionHold =
-    timer.mode !== 'idle' &&
-    timer.remainingMs === 0 &&
-    !timer.isRunning &&
-    !timer.isPaused;
-
   const commitFocusNow = async (rawStr: string) => {
     const parsed = parsePositiveInt(rawStr);
     if (parsed === null) return;
@@ -136,11 +130,11 @@ export function ControlPanel({ timer }: Props) {
   };
 
   const handleStart = async () => {
-    if (timer.isPaused) {
+    if (timer.status === 'paused') {
       void ipcTimerResume();
       return;
     }
-    if (timer.mode === 'idle') {
+    if (timer.status === 'idle') {
       await flushPendingSettings();
       await ipcTimerStart('focus');
     }
@@ -158,12 +152,8 @@ export function ControlPanel({ timer }: Props) {
   const isFocusActive = timer.mode === 'focus';
   const isRestActive = timer.mode === 'rest';
 
-  const canStart = timer.mode === 'idle' || timer.isPaused;
-  const canPause =
-    timer.mode !== 'idle' &&
-    timer.isRunning &&
-    !timer.isPaused &&
-    !isCompletionHold;
+  const canStart = timer.status === 'idle' || timer.status === 'paused';
+  const canPause = timer.status === 'running';
 
   return (
     <div className="control-panel">

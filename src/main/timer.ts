@@ -1,141 +1,78 @@
 import { BrowserWindow } from 'electron';
 import { EventEmitter } from 'node:events';
-import type { TimerMode, TimerState } from '../shared/types';
+import type { TimerState } from '../shared/types';
 import { IPC, TICK_INTERVAL_MS } from '../shared/constants';
+import { TimerEngine, type ActiveTimerMode } from '../shared/timer-engine';
 import { settingsStore } from './settings-store';
 import { bringBrowserWindowToForeground } from './window-focus';
 
 /**
- * 精準計時器
- *
- * 採用「目標時間戳 (Date.now() + duration)」+ 高頻比對的方式，
- * 而非單純的 setInterval 倒數，避免系統休眠造成累計誤差。
+ * Main process 計時服務：包裝共用的 TimerEngine（純計時核心），
+ * 負責 Electron 側的職責 — IPC 廣播、完成時帶視窗到前景與閃爍提醒。
  */
 class TimerService extends EventEmitter {
-  private mode: TimerMode = 'idle';
-  private totalMs = 0;
-  /** 預定結束的時間戳（毫秒） */
-  private targetTimestamp = 0;
-  /** 暫停時的剩餘毫秒 */
-  private pausedRemainingMs = 0;
-  private isRunning = false;
-  private isPaused = false;
-  private tickHandle: NodeJS.Timeout | null = null;
+  private readonly engine = new TimerEngine({
+    tickIntervalMs: TICK_INTERVAL_MS,
+    onTick: () => this.broadcast(),
+    onStateChanged: (state) => {
+      this.forEachAliveWindow((win) =>
+        win.webContents.send(IPC.TIMER_STATE_CHANGED, state),
+      );
+      this.emit('state-changed', state);
+    },
+    onCompleted: (mode) => this.handleCompleted(mode),
+  });
 
   /** 取得當前狀態 */
   getState(): TimerState {
-    return {
-      mode: this.mode,
-      totalMs: this.totalMs,
-      remainingMs: this.computeRemainingMs(),
-      isRunning: this.isRunning,
-      isPaused: this.isPaused,
-    };
+    return this.engine.getState();
   }
 
   /** 啟動指定模式的倒數 */
-  async start(mode: 'focus' | 'rest'): Promise<TimerState> {
+  start(mode: ActiveTimerMode): TimerState {
     const settings = settingsStore.get();
     const seconds = mode === 'focus' ? settings.focusSeconds : settings.restSeconds;
-    const totalMs = seconds * 1000;
-
-    this.mode = mode;
-    this.totalMs = totalMs;
-    this.targetTimestamp = Date.now() + totalMs;
-    this.pausedRemainingMs = 0;
-    this.isRunning = true;
-    this.isPaused = false;
-
-    this.startTickLoop();
-    this.emitStateChanged();
-    return this.getState();
+    return this.engine.start(mode, seconds * 1000);
   }
 
   /** 暫停 */
   pause(): TimerState {
-    if (!this.isRunning || this.isPaused || this.mode === 'idle') {
-      return this.getState();
-    }
-    this.pausedRemainingMs = Math.max(0, this.targetTimestamp - Date.now());
-    this.isPaused = true;
-    this.stopTickLoop();
-    this.emitStateChanged();
-    return this.getState();
+    return this.engine.pause();
   }
 
   /** 從暫停中恢復 */
   resume(): TimerState {
-    if (!this.isPaused || this.mode === 'idle') {
-      return this.getState();
-    }
-    this.targetTimestamp = Date.now() + this.pausedRemainingMs;
-    this.pausedRemainingMs = 0;
-    this.isPaused = false;
-    this.isRunning = true;
-    this.startTickLoop();
-    this.emitStateChanged();
-    return this.getState();
+    return this.engine.resume();
   }
 
   /** 切換 暫停 / 恢復；若處於 idle，使用預設模式啟動 */
-  async toggleRunning(defaultMode: 'focus' | 'rest' = 'focus'): Promise<TimerState> {
-    if (this.mode === 'idle') {
+  toggleRunning(defaultMode: ActiveTimerMode = 'focus'): TimerState {
+    const { mode, status } = this.engine.getState();
+    if (mode === 'idle') {
       return this.start(defaultMode);
     }
-    if (this.isPaused) {
+    if (status === 'paused') {
       return this.resume();
     }
     return this.pause();
   }
 
   /**
-   * 使用者重置：idle 不變；專注／休息則載入該模式設定的完整時長並等同按下暫停（不進行倒數）。
+   * 使用者重置：idle 不變；專注／休息則載入該模式設定的完整時長並停在 paused（不倒數）。
    */
   reset(): TimerState {
-    if (this.mode === 'idle') {
-      this.stopTickLoop();
-      this.totalMs = 0;
-      this.targetTimestamp = 0;
-      this.pausedRemainingMs = 0;
-      this.isRunning = false;
-      this.isPaused = false;
-      this.emitStateChanged();
-      return this.getState();
+    const { mode } = this.engine.getState();
+    if (mode === 'idle') {
+      return this.engine.reset(0);
     }
-
     const settings = settingsStore.get();
-    const seconds = this.mode === 'focus' ? settings.focusSeconds : settings.restSeconds;
-    const totalMs = seconds * 1000;
-
-    this.stopTickLoop();
-    this.totalMs = totalMs;
-    this.pausedRemainingMs = totalMs;
-    this.isPaused = true;
-    this.isRunning = true;
-    this.targetTimestamp = 0;
-
-    this.emitStateChanged();
-    return this.getState();
+    const seconds = mode === 'focus' ? settings.focusSeconds : settings.restSeconds;
+    return this.engine.reset(seconds * 1000);
   }
 
-  /** 計時完成或流程結束時清空為 idle */
-  private clearToIdle(): TimerState {
-    this.stopTickLoop();
-    this.mode = 'idle';
-    this.totalMs = 0;
-    this.targetTimestamp = 0;
-    this.pausedRemainingMs = 0;
-    this.isRunning = false;
-    this.isPaused = false;
-    this.emitStateChanged();
-    return this.getState();
-  }
-
-  /** 對所有尚未銷毀的視窗執行回呼 */
-  private forEachAliveWindow(cb: (win: BrowserWindow) => void): void {
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) cb(win);
-    }
+  /** 使用者關閉「倒數完成」提示後回到 idle */
+  dismissCompletion(): TimerState {
+    return this.engine.dismissCompletion();
   }
 
   /** 廣播當前狀態到所有渲染進程 */
@@ -148,63 +85,20 @@ class TimerService extends EventEmitter {
   // 私有方法
   // ─────────────────────────────────────────────────────────────
 
-  private computeRemainingMs(): number {
-    if (this.mode === 'idle') return 0;
-    if (this.isPaused) return this.pausedRemainingMs;
-    return Math.max(0, this.targetTimestamp - Date.now());
-  }
-
-  private startTickLoop(): void {
-    this.stopTickLoop();
-    this.tickHandle = setInterval(() => {
-      const remaining = this.computeRemainingMs();
-      this.broadcast();
-
-      if (remaining <= 0 && this.mode !== 'idle' && !this.isPaused) {
-        this.handleComplete();
-      }
-    }, TICK_INTERVAL_MS);
-  }
-
-  private stopTickLoop(): void {
-    if (this.tickHandle) {
-      clearInterval(this.tickHandle);
-      this.tickHandle = null;
-    }
-  }
-
-  private handleComplete(): void {
-    this.stopTickLoop();
-    this.isRunning = false;
-    this.isPaused = false;
-
-    // 鎖定剩餘時間為 0，確保 UI 顯示 00:00；維持 mode 為 focus/rest 讓 Renderer 顯示中央完成提示
-    this.targetTimestamp = Date.now();
-
+  private handleCompleted(mode: ActiveTimerMode): void {
     // 關閉到 Tray／最小化時仍須帶出主視窗（不再顯示系統右下角通知）
     this.bringWindowsToForeground();
     this.flashWindowAttention();
-
-    this.broadcast();
-    this.emitStateChanged();
+    this.forEachAliveWindow((win) =>
+      win.webContents.send(IPC.TIMER_COMPLETED, { mode }),
+    );
   }
 
-  /** 使用者關閉「倒數完成」提示後回到 idle */
-  dismissCompletion(): TimerState {
-    if (this.mode === 'idle') {
-      return this.getState();
+  /** 對所有尚未銷毀的視窗執行回呼 */
+  private forEachAliveWindow(cb: (win: BrowserWindow) => void): void {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) cb(win);
     }
-    if (
-      this.isRunning ||
-      this.isPaused ||
-      (this.mode !== 'focus' && this.mode !== 'rest')
-    ) {
-      return this.getState();
-    }
-    if (this.computeRemainingMs() > 0) {
-      return this.getState();
-    }
-    return this.clearToIdle();
   }
 
   /** 還原、顯示並聚焦所有應用程式視窗（含關閉到 Tray 的隱藏狀態） */
@@ -231,14 +125,6 @@ class TimerService extends EventEmitter {
       win.on('focus', stopFlash);
       setTimeout(stopFlash, 6000);
     }
-  }
-
-  private emitStateChanged(): void {
-    const state = this.getState();
-    this.forEachAliveWindow((win) =>
-      win.webContents.send(IPC.TIMER_STATE_CHANGED, state),
-    );
-    this.emit('state-changed', state);
   }
 }
 

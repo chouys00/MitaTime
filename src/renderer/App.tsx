@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
 import { TimerDisplay } from './components/TimerDisplay';
 import { ProgressBar } from './components/ProgressBar';
 import { ControlPanel } from './components/ControlPanel';
 import { TitleBar } from './components/TitleBar';
 import { useElectronBridge } from './hooks/useElectronBridge';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
-import { ipcTimerDismissCompletion } from './lib/timerIpc';
+import { ipcTimerDismissCompletion, onTimerCompleted } from './lib/timerIpc';
 import { useTimerStore } from './store/timerStore';
-import type { TimerMode, TimerState } from '../shared/types';
+import type { TimerMode } from '../shared/types';
 
 // 音效：Wikimedia Commons「Meow.ogg」— Dan Crosby，CC BY-SA 3.0
 // https://commons.wikimedia.org/wiki/File:Meow.ogg
@@ -17,81 +17,31 @@ export function App() {
   useElectronBridge();
   useKeyboardShortcuts();
   const timer = useTimerStore((s) => s.timer);
+  // overlay 淡出過程中 mode 已變回 idle，因此另存最後完成的模式讓標題不閃動
   const [completionMode, setCompletionMode] = useState<Exclude<TimerMode, 'idle'> | null>(null);
-  const [overlayVisible, setOverlayVisible] = useState(false);
-  const prevTimerRef = useRef<TimerState | null>(null);
-  const completedCycleRef = useRef<string | null>(null);
 
   const isRest = timer.mode === 'rest';
   const isFocus = timer.mode === 'focus';
+  const overlayVisible = timer.status === 'completed';
 
-  const appClassName = useMemo(
-    () => ['app', isFocus && 'mode-focus', isRest && 'mode-rest'].filter(Boolean).join(' '),
-    [isFocus, isRest],
-  );
+  const appClassName = ['app', isFocus && 'mode-focus', isRest && 'mode-rest']
+    .filter(Boolean)
+    .join(' ');
 
-  const isCompleted = useMemo(
-    () =>
-      timer.mode !== 'idle' &&
-      timer.remainingMs === 0 &&
-      !timer.isRunning &&
-      !timer.isPaused,
-    [timer.mode, timer.remainingMs, timer.isRunning, timer.isPaused],
-  );
+  // 完成事件（main process 或瀏覽器預覽 fallback 發出）→ 播放音效
+  useEffect(() => onTimerCompleted(playCompletionMeow), []);
+
+  // 進入 completed 時記下完成的模式，供 overlay 標題（含淡出期間）使用
+  useEffect(() => {
+    if (timer.status === 'completed' && (timer.mode === 'focus' || timer.mode === 'rest')) {
+      setCompletionMode(timer.mode);
+    }
+  }, [timer.status, timer.mode]);
 
   const dismissCompletionOverlay = useCallback(() => {
     if (!overlayVisible) return;
     void ipcTimerDismissCompletion();
   }, [overlayVisible]);
-
-  useEffect(() => {
-    const prev = prevTimerRef.current;
-    // 自「結束並停表」再起同模式新的一輪時 mode 仍為 focus/rest，
-    // 僅藉 mode／idle 無法清空 completedCycleRef，會導致下次完成時同一 cycleKey 被略過音效／overlay。
-    if (
-      prev &&
-      timer.mode !== 'idle' &&
-      timer.isRunning &&
-      !timer.isPaused &&
-      timer.remainingMs > 0 &&
-      prev.remainingMs === 0 &&
-      !prev.isRunning &&
-      !prev.isPaused &&
-      prev.mode === timer.mode
-    ) {
-      completedCycleRef.current = null;
-    }
-
-    const cycleKey = isCompleted ? `${timer.mode}:${timer.totalMs}` : null;
-    const crossedToCompleted =
-      isCompleted &&
-      (!prev ||
-        prev.mode !== timer.mode ||
-        prev.remainingMs > 0 ||
-        prev.isRunning ||
-        prev.isPaused);
-
-    if (
-      crossedToCompleted &&
-      cycleKey !== completedCycleRef.current &&
-      (timer.mode === 'focus' || timer.mode === 'rest')
-    ) {
-      completedCycleRef.current = cycleKey;
-      setCompletionMode(timer.mode);
-      setOverlayVisible(true);
-      playCompletionMeow();
-    }
-
-    if (overlayVisible && !isCompleted) {
-      setOverlayVisible(false);
-    }
-
-    if (timer.mode === 'idle' || (prev && prev.mode !== timer.mode)) {
-      completedCycleRef.current = null;
-    }
-
-    prevTimerRef.current = timer;
-  }, [timer, overlayVisible, isCompleted]);
 
   const completionTitle =
     completionMode === 'rest' ? '休息結束' : '專注結束，該休息了';

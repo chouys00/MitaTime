@@ -22,5 +22,5 @@
     }
   },
   "include": ["src/main", "src/preload", "src/shared"],
-  "exclude": ["node_modules", "dist", "src/renderer"]
+  "exclude": ["node_modules", "dist", "src/renderer", "**/*.test.ts"]
 }

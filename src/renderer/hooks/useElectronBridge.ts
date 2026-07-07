@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { IPC } from '../../shared/constants';
-import type { TimerState, AppSettings } from '../../shared/types';
+import type { TimerState, AppSettings, TimerCompletedPayload } from '../../shared/types';
+import { emitTimerCompleted } from '../lib/timerIpc';
 import { useTimerStore } from '../store/timerStore';
 
 /**
@@ -32,6 +33,14 @@ export function useElectronBridge(): void {
       if (state) setTimer(state);
     });
 
+    const unsubCompleted = api.on(IPC.TIMER_COMPLETED, (...args: unknown[]) => {
+      if (!mounted) return;
+      const payload = args[0] as TimerCompletedPayload | undefined;
+      if (payload && (payload.mode === 'focus' || payload.mode === 'rest')) {
+        emitTimerCompleted(payload.mode);
+      }
+    });
+
     void api.invoke<TimerState>(IPC.TIMER_GET_STATE).then((state) => {
       if (mounted && state) setTimer(state);
     });
@@ -43,6 +52,7 @@ export function useElectronBridge(): void {
       mounted = false;
       unsubTick();
       unsubState();
+      unsubCompleted();
     };
   }, [setTimer, setSettings]);
 }

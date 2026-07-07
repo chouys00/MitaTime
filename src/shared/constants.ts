@@ -16,6 +16,7 @@ export const IPC = {
 
   TIMER_TICK: 'timer:tick',
   TIMER_STATE_CHANGED: 'timer:state-changed',
+  TIMER_COMPLETED: 'timer:completed',
 
   SETTINGS_GET: 'settings:get',
   SETTINGS_SAVE: 'settings:save',
@@ -40,7 +41,8 @@ export type SendChannel =
 
 export type ReceiveChannel =
   | typeof IPC.TIMER_TICK
-  | typeof IPC.TIMER_STATE_CHANGED;
+  | typeof IPC.TIMER_STATE_CHANGED
+  | typeof IPC.TIMER_COMPLETED;
 
 export const ALLOWED_SEND_CHANNELS: readonly SendChannel[] = [
   IPC.TIMER_START,
@@ -60,6 +62,7 @@ export const ALLOWED_SEND_CHANNELS: readonly SendChannel[] = [
 export const ALLOWED_RECEIVE_CHANNELS: readonly ReceiveChannel[] = [
   IPC.TIMER_TICK,
   IPC.TIMER_STATE_CHANGED,
+  IPC.TIMER_COMPLETED,
 ] as const;
 
 /** 預設專注時長（秒） */

@@ -13,6 +13,7 @@ interface TimerStore {
 
 const INITIAL_TIMER: TimerState = {
   mode: 'idle',
+  status: 'idle',
   totalMs: 0,
   remainingMs: 0,
   isRunning: false,

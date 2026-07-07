@@ -19,8 +19,7 @@ function formatTime(ms: number): string {
 
 export function TimerDisplay({ timer }: Props) {
   const settings = useTimerStore((s) => s.settings);
-  const isCompleted =
-    timer.mode !== 'idle' && timer.remainingMs === 0 && !timer.isRunning && !timer.isPaused;
+  const isCompleted = timer.status === 'completed';
 
   // idle 狀態時顯示預設專注時長作為提示
   const displayMs =
